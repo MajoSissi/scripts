@@ -1,4 +1,11 @@
-// 处理所有网络请求
+/*
+  API: https://explame.workers.dev/{gist_id}?file={filename}&type={type}
+  环境变量: GITHUB_TOKEN
+  参数介绍:
+  gist_id - 提交的gist id路径
+  file - 要提交的文件名称
+  type - 提交类型 [ mihomo, ... ]
+*/
 addEventListener('fetch', event => {
   event.respondWith(handleRequest(event.request))
 })
