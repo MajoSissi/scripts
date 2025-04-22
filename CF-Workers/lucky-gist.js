@@ -6,6 +6,7 @@
   file - 要提交的文件名称
   type - 提交类型 [ mihomo, ... ]
 */
+// 处理所有网络请求
 addEventListener('fetch', event => {
   event.respondWith(handleRequest(event.request))
 })
@@ -80,7 +81,7 @@ async function handleGetRequest(file, gistId, token) {
   
   return new Response(fileResult.content, {
     status: 200,
-    headers: { 'Content-Type': 'text/plain' }
+    headers: { 'Content-Type': 'text/plain; charset=utf-8' }
   })
 }
 
@@ -130,7 +131,7 @@ async function handlePostRequest(file, type, gistId, request, token) {
     file_url: updateResult.data.files[file].raw_url
   }), {
     status: 200,
-    headers: { 'Content-Type': 'application/json' }
+    headers: { 'Content-Type': 'application/json; charset=utf-8' }
   })
 }
 
