@@ -1,0 +1,49 @@
+/**
+ * Cloudflare Worker 短链接跳转实现
+ * 设置变量KV绑定变量"SHORT_LINKS"
+ * 从KV存储中读取短链接配置并进行重定向
+ */
+ 
+addEventListener('fetch', event => {
+  event.respondWith(handleRequest(event.request))
+})
+
+/**
+ * 处理请求并进行重定向
+ * @param {Request} request - 用户请求
+ * @returns {Response} - 重定向响应或错误页面
+ */
+async function handleRequest(request) {
+  // 获取URL并解析路径
+  const url = new URL(request.url)
+  const path = url.pathname.replace(/^\//, '') // 移除开头的斜杠
+  
+  // 如果路径为空，返回默认页面
+  if (path === '') {
+    return new Response('短链接跳转服务', {
+      headers: { 'Content-Type': 'text/html; charset=utf-8' },
+    })
+  }
+  
+  try {
+    // 从KV中获取目标URL
+    const target = await SHORT_LINKS.get(path)
+    
+    // 如果找到目标URL，则重定向
+    if (target) {
+      return Response.redirect(target, 302)
+    } else {
+      // 如果未找到目标URL，返回404页面
+      return new Response('找不到对应的短链接', {
+        status: 404,
+        headers: { 'Content-Type': 'text/html; charset=utf-8' },
+      })
+    }
+  } catch (error) {
+    // 处理错误情况
+    return new Response('服务器错误: ' + error.message, {
+      status: 500,
+      headers: { 'Content-Type': 'text/html; charset=utf-8' },
+    })
+  }
+}
