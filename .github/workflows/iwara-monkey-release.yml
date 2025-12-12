@@ -5,7 +5,6 @@ on:
     branches: [main]
     paths:
       - javascript/iwara/**
-      - .github/workflows/iwara-monkey-release.yml
   workflow_dispatch: {}
 
 permissions:
@@ -29,16 +28,19 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: npm
-          cache-dependency-path: javascript/iwara/package-lock.json
+          cache: pnpm
+          cache-dependency-path: javascript/iwara/pnpm-lock.yaml
+
+      - name: Enable Corepack
+        run: corepack enable
 
       - name: Install
         working-directory: javascript/iwara
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
       - name: Build
         working-directory: javascript/iwara
-        run: npm run build
+        run: pnpm build
 
       - name: Move tag monkey to this commit
         run: |
