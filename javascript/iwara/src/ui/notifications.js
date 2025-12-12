@@ -19,8 +19,7 @@ export function createNotifier(getProxyList) {
       if (!hostname) return message;
 
       const enabledCount = (getProxyList?.() || []).filter((p) => p?.enabled).length;
-      const suffix = enabledCount > 1 ? ` (已启用 ${enabledCount} 个，随机；一次操作内固定)` : '';
-      return `${message}\n🔗 本次代理: ${hostname}${suffix}`;
+      return `${message}\n🔗 本次代理: ${hostname}`;
     } catch {
       return message;
     }
