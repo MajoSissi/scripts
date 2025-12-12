@@ -14,8 +14,8 @@
 ## 开发
 
 ```bash
-npm install
-npm run dev
+pnpm install
+pnpm dev
 ```
 
 浏览器安装 Tampermonkey 后，打开终端输出的脚本安装链接（`vite-plugin-monkey` 会打印）。
@@ -23,7 +23,7 @@ npm run dev
 ## 构建
 
 ```bash
-npm run build
+pnpm build
 ```
 
 产物在 `dist/iwara-external-player.user.js`，把它导入到油猴即可。

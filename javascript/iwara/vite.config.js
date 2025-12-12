@@ -8,7 +8,7 @@ export default defineConfig({
       userscript: {
         name: 'Iwara 外部播放器',
         namespace: 'none',
-        version: '1.4',
+        version: '1.5',
         description: '支持外部播放器和视频播放链接代理(需自建服务)',
         author: 'EvilSissi',
         match: ['*://*.iwara.tv/*'],
