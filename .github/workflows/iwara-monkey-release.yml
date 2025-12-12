@@ -5,6 +5,8 @@ on:
     branches: [main]
     paths:
       - javascript/iwara/**
+      - '!javascript/iwara/README.md'
+      - '!javascript/iwara/README.MD'
   workflow_dispatch: {}
 
 permissions:
@@ -31,8 +33,11 @@ jobs:
           cache: pnpm
           cache-dependency-path: javascript/iwara/pnpm-lock.yaml
 
-      - name: Enable Corepack
-        run: corepack enable
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.22.0
+          run_install: false
 
       - name: Install
         working-directory: javascript/iwara
