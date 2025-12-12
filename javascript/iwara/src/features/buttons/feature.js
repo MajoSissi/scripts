@@ -34,7 +34,7 @@ export function createButtonsFeature(deps) {
             return;
           }
           const proxyPrefix = videoApi.pickProxyPrefix?.() || '';
-          videoApi.notify?.(proxyPrefix ? '🔄 正在通过代理获取视频链接...' : '🔄 正在获取视频链接...', 'info', {
+          videoApi.notify?.('🔄 正在获取视频链接...', 'info', {
             proxyPrefix
           });
           const { proxiedUrl, url } = await videoApi.getVideoLinkById(videoId, null, { proxyPrefix });
@@ -58,7 +58,7 @@ export function createButtonsFeature(deps) {
             return;
           }
           const proxyPrefix = videoApi.pickProxyPrefix?.() || '';
-          videoApi.notify?.(proxyPrefix ? '🔄 正在通过代理获取视频链接...' : '🔄 正在获取视频链接...', 'info', {
+          videoApi.notify?.('🔄 正在获取视频链接...', 'info', {
             proxyPrefix
           });
           const { proxiedUrl, url } = await videoApi.getVideoLinkById(videoId, null, { proxyPrefix });
@@ -106,7 +106,7 @@ export function createButtonsFeature(deps) {
         e.stopPropagation();
         try {
           const proxyPrefix = videoApi.pickProxyPrefix?.() || '';
-          videoApi.notify?.(proxyPrefix ? '🔄 正在通过代理获取视频链接...' : '🔄 正在获取视频链接...', 'info', {
+          videoApi.notify?.('🔄 正在获取视频链接...', 'info', {
             proxyPrefix
           });
           const { proxiedUrl, url } = await videoApi.getVideoLinkById(videoId, null, { proxyPrefix });
@@ -127,7 +127,7 @@ export function createButtonsFeature(deps) {
         e.stopPropagation();
         try {
           const proxyPrefix = videoApi.pickProxyPrefix?.() || '';
-          videoApi.notify?.(proxyPrefix ? '🔄 正在通过代理获取视频链接...' : '🔄 正在获取视频链接...', 'info', {
+          videoApi.notify?.('🔄 正在获取视频链接...', 'info', {
             proxyPrefix
           });
           const { proxiedUrl, url } = await videoApi.getVideoLinkById(videoId, null, { proxyPrefix });

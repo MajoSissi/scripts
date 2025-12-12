@@ -187,7 +187,7 @@ export function createVideoApi(deps) {
   async function playVideoById(videoId, videoTitle, quality = null) {
     try {
       const proxyPrefix = getActionProxyPrefix();
-      notify(proxyPrefix ? '🔄 正在通过代理获取视频链接...' : '🔄 正在获取视频链接...', 'info', {
+      notify( '🔄 正在获取视频链接...', 'info', {
         proxyPrefix: proxyPrefix || ''
       });
       const { proxiedUrl, title, quality: actualQuality } = await getVideoLinkById(videoId, quality, { proxyPrefix });
