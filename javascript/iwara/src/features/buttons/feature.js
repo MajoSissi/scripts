@@ -33,11 +33,14 @@ export function createButtonsFeature(deps) {
             videoApi.notify?.('❌ 无法获取视频 ID', 'error');
             return;
           }
-          videoApi.notify?.('🔄 正在获取视频链接...', 'info');
-          const { url } = await videoApi.getVideoLinkById(videoId);
-          const finalUrl = getProxiedUrl(url);
+          const proxyPrefix = videoApi.pickProxyPrefix?.() || '';
+          videoApi.notify?.(proxyPrefix ? '🔄 正在通过代理获取视频链接...' : '🔄 正在获取视频链接...', 'info', {
+            proxyPrefix
+          });
+          const { proxiedUrl, url } = await videoApi.getVideoLinkById(videoId, null, { proxyPrefix });
+          const finalUrl = proxiedUrl || (proxyPrefix ? proxyPrefix + url : url);
           await navigator.clipboard.writeText(finalUrl);
-          videoApi.notify?.('✅ 链接已复制到剪贴板', 'success');
+          videoApi.notify?.('✅ 链接已复制到剪贴板', 'success', { proxyPrefix });
         } catch (error) {
           console.error('[Iwara Player] 复制失败:', error);
           videoApi.notify?.('❌ 复制失败: ' + (error?.message || error), 'error');
@@ -54,11 +57,14 @@ export function createButtonsFeature(deps) {
             videoApi.notify?.('❌ 无法获取视频 ID', 'error');
             return;
           }
-          videoApi.notify?.('🔄 正在获取视频链接...', 'info');
-          const { url } = await videoApi.getVideoLinkById(videoId);
-          const finalUrl = getProxiedUrl(url);
+          const proxyPrefix = videoApi.pickProxyPrefix?.() || '';
+          videoApi.notify?.(proxyPrefix ? '🔄 正在通过代理获取视频链接...' : '🔄 正在获取视频链接...', 'info', {
+            proxyPrefix
+          });
+          const { proxiedUrl, url } = await videoApi.getVideoLinkById(videoId, null, { proxyPrefix });
+          const finalUrl = proxiedUrl || (proxyPrefix ? proxyPrefix + url : url);
           window.open(finalUrl, '_blank');
-          videoApi.notify?.('✅ 已在新标签页打开', 'success');
+          videoApi.notify?.('✅ 已在新标签页打开', 'success', { proxyPrefix });
         } catch (error) {
           console.error('[Iwara Player] 打开失败:', error);
           videoApi.notify?.('❌ 打开失败: ' + (error?.message || error), 'error');
@@ -99,11 +105,14 @@ export function createButtonsFeature(deps) {
         e.preventDefault();
         e.stopPropagation();
         try {
-          videoApi.notify?.('🔄 正在获取视频链接...', 'info');
-          const { url } = await videoApi.getVideoLinkById(videoId);
-          const finalUrl = getProxiedUrl(url);
+          const proxyPrefix = videoApi.pickProxyPrefix?.() || '';
+          videoApi.notify?.(proxyPrefix ? '🔄 正在通过代理获取视频链接...' : '🔄 正在获取视频链接...', 'info', {
+            proxyPrefix
+          });
+          const { proxiedUrl, url } = await videoApi.getVideoLinkById(videoId, null, { proxyPrefix });
+          const finalUrl = proxiedUrl || (proxyPrefix ? proxyPrefix + url : url);
           await navigator.clipboard.writeText(finalUrl);
-          videoApi.notify?.('✅ 链接已复制到剪贴板', 'success');
+          videoApi.notify?.('✅ 链接已复制到剪贴板', 'success', { proxyPrefix });
         } catch (error) {
           console.error('[Iwara Player] 复制失败:', error);
           videoApi.notify?.('❌ 复制失败: ' + (error?.message || error), 'error');
@@ -117,11 +126,14 @@ export function createButtonsFeature(deps) {
         e.preventDefault();
         e.stopPropagation();
         try {
-          videoApi.notify?.('🔄 正在获取视频链接...', 'info');
-          const { url } = await videoApi.getVideoLinkById(videoId);
-          const finalUrl = getProxiedUrl(url);
+          const proxyPrefix = videoApi.pickProxyPrefix?.() || '';
+          videoApi.notify?.(proxyPrefix ? '🔄 正在通过代理获取视频链接...' : '🔄 正在获取视频链接...', 'info', {
+            proxyPrefix
+          });
+          const { proxiedUrl, url } = await videoApi.getVideoLinkById(videoId, null, { proxyPrefix });
+          const finalUrl = proxiedUrl || (proxyPrefix ? proxyPrefix + url : url);
           window.open(finalUrl, '_blank');
-          videoApi.notify?.('✅ 已在新标签页打开', 'success');
+          videoApi.notify?.('✅ 已在新标签页打开', 'success', { proxyPrefix });
         } catch (error) {
           console.error('[Iwara Player] 打开失败:', error);
           videoApi.notify?.('❌ 打开失败: ' + (error?.message || error), 'error');

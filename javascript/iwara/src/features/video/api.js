@@ -14,18 +14,20 @@ async function hashStringSHA1(input) {
 
 /**
  * @param {{
- *  getCurrentProxyPrefix: () => string,
+ *  pickProxyPrefix?: () => string,
+ *  proxifyWithPrefix?: (prefix: string, url: string) => string,
  *  getProxiedUrl: (url: string) => string,
  *  getExternalPlayer: () => string,
  *  getPlayers: () => Array<any>,
  *  getVideoQuality: () => string,
- *  notify: (msg: string, type?: 'info'|'success'|'error') => void,
+ *  notify: (msg: string, type?: 'info'|'success'|'error', meta?: { proxyPrefix?: string, proxyUrl?: string, proxyHostname?: string }) => void,
  *  svgIcons: Record<string,string>
  * }} deps
  */
 export function createVideoApi(deps) {
   const {
-    getCurrentProxyPrefix,
+    pickProxyPrefix,
+    proxifyWithPrefix,
     getProxiedUrl,
     getExternalPlayer,
     getPlayers,
@@ -33,6 +35,13 @@ export function createVideoApi(deps) {
     notify,
     svgIcons
   } = deps;
+
+  const getActionProxyPrefix = () => (typeof pickProxyPrefix === 'function' ? pickProxyPrefix() : '');
+
+  const proxify = (prefix, url) => {
+    if (typeof proxifyWithPrefix === 'function') return proxifyWithPrefix(prefix, url);
+    return prefix ? prefix + url : url;
+  };
 
   const createSVGIcon = (iconName) => {
     const pathData = svgIcons?.[iconName];
@@ -49,14 +58,14 @@ export function createVideoApi(deps) {
     return button;
   };
 
-  async function getVideoLinkById(videoId, quality = null) {
-    const proxyPrefix = getCurrentProxyPrefix();
+  async function getVideoLinkById(videoId, quality = null, options = {}) {
+    const proxyPrefix = typeof options?.proxyPrefix === 'string' ? options.proxyPrefix : getActionProxyPrefix();
 
     const token = localStorage.getItem('token');
     const headers = {};
     if (token) headers['Authorization'] = `Bearer ${token}`;
 
-    const apiUrl = `${proxyPrefix}https://api.iwara.tv/video/${videoId}`;
+    const apiUrl = proxify(proxyPrefix, `https://api.iwara.tv/video/${videoId}`);
     const infoResponse = await fetch(apiUrl, { headers });
     if (!infoResponse.ok) throw new Error('获取视频信息失败');
     const info = await infoResponse.json();
@@ -70,7 +79,10 @@ export function createVideoApi(deps) {
 
     const xVersion = await hashStringSHA1(`${fileId}_${expires}_5nFp9kmbNnHdAFhaqMvt`);
 
-    const resourceUrl = `${proxyPrefix}https://files.iwara.tv${fileUrl.pathname}?expires=${expires}&hash=${hash}`;
+    const resourceUrl = proxify(
+      proxyPrefix,
+      `https://files.iwara.tv${fileUrl.pathname}?expires=${expires}&hash=${hash}`
+    );
     const resourceHeaders = { 'X-Version': xVersion };
     if (token) resourceHeaders['Authorization'] = `Bearer ${token}`;
 
@@ -87,7 +99,8 @@ export function createVideoApi(deps) {
     if (!video) video = resources.find((v) => v.name === 'Source') || resources[0];
 
     const finalUrl = 'https:' + video.src.view;
-    return { url: finalUrl, title: info.title, quality: video.name };
+    const proxiedUrl = proxify(proxyPrefix, finalUrl);
+    return { url: finalUrl, proxiedUrl, title: info.title, quality: video.name, proxyPrefix };
   }
 
   function getVideoUrl() {
@@ -95,7 +108,7 @@ export function createVideoApi(deps) {
       '#vjs_video_3_html5_api, [id^="vjs_video_"][id$="_html5_api"], video.vjs-tech, video[src]'
     );
     if (videoElement && videoElement.src) return videoElement.src;
-    console.warn('%c[Iwara Player] 未找到视频源', 'color: #ff6b6b; font-weight: bold;');
+    console.warn('%c[Iwara Player] 未找到视频源', 'color: #e06c75; font-weight: bold;');
     return null;
   }
 
@@ -153,7 +166,7 @@ export function createVideoApi(deps) {
     try {
       console.log(
         '%c[Iwara Player] 播放信息',
-        'color: #667eea; font-weight: bold;',
+        'color: #61afef; font-weight: bold;',
         '\n标题:',
         videoTitle,
         '\n播放器:',
@@ -173,15 +186,18 @@ export function createVideoApi(deps) {
 
   async function playVideoById(videoId, videoTitle, quality = null) {
     try {
-      notify('🔄 正在获取视频链接...', 'info');
-      const { url, title, quality: actualQuality } = await getVideoLinkById(videoId, quality);
-      const finalUrl = getProxiedUrl(url);
+      const proxyPrefix = getActionProxyPrefix();
+      notify(proxyPrefix ? '🔄 正在通过代理获取视频链接...' : '🔄 正在获取视频链接...', 'info', {
+        proxyPrefix: proxyPrefix || ''
+      });
+      const { proxiedUrl, title, quality: actualQuality } = await getVideoLinkById(videoId, quality, { proxyPrefix });
+      const finalUrl = proxiedUrl;
       const finalTitle = videoTitle || title;
       const externalPlayer = getExternalPlayer();
 
       console.log(
         '%c[Iwara Player] 播放信息',
-        'color: #667eea; font-weight: bold;',
+        'color: #61afef; font-weight: bold;',
         '\n视频ID:',
         videoId,
         '\n标题:',
@@ -194,7 +210,9 @@ export function createVideoApi(deps) {
         finalUrl
       );
 
-      notify(`🎬 调用 ${externalPlayer} 播放器\n📸 画质: ${actualQuality}`, 'info');
+      notify(`🎬 调用 ${externalPlayer} 播放器\n📸 画质: ${actualQuality}`, 'info', {
+        proxyPrefix: proxyPrefix || ''
+      });
       const protocolUrl = getPlayerProtocolUrl(externalPlayer, finalUrl, finalTitle);
       window.open(protocolUrl, '_self');
     } catch (error) {
@@ -205,6 +223,7 @@ export function createVideoApi(deps) {
 
   return {
     createButton,
+    pickProxyPrefix: getActionProxyPrefix,
     getVideoLinkById,
     getVideoUrl,
     getVideoTitle,

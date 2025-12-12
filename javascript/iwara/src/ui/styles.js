@@ -1,26 +1,44 @@
 export function injectGlobalStyles() {
 	GM_addStyle(`
+		:root {
+			--iwara-bg: #282c34;
+			--iwara-bg-2: #21252b;
+			--iwara-panel: #1f2329;
+			--iwara-border: rgba(171, 178, 191, 0.14);
+			--iwara-border-strong: rgba(171, 178, 191, 0.22);
+			--iwara-text: #abb2bf;
+			--iwara-text-strong: #dcdfe4;
+			--iwara-muted: #5c6370;
+			--iwara-subtle: #7f848e;
+			--iwara-accent: #61afef;
+			--iwara-cyan: #56b6c2;
+			--iwara-green: #98c379;
+			--iwara-orange: #d19a66;
+			--iwara-yellow: #e5c07b;
+			--iwara-red: #e06c75;
+		}
+
         /* ========== 浮动按钮样式 ========== */
         .iwara-mpv-fab {
             position: fixed;
             right: 30px;
             z-index: 999998;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, var(--iwara-accent) 0%, var(--iwara-cyan) 100%);
             color: #fff;
             border: none;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            box-shadow: 0 4px 16px rgba(102, 126, 234, 0.4);
+            box-shadow: 0 4px 16px rgba(97, 175, 239, 0.35);
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             backdrop-filter: blur(10px);
             user-select: none;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         }
         .iwara-mpv-fab:hover {
-            background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
-            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+            background: linear-gradient(135deg, var(--iwara-cyan) 0%, var(--iwara-accent) 100%);
+            box-shadow: 0 6px 20px rgba(97, 175, 239, 0.5);
             transform: translateY(-2px) scale(1.05);
         }
         .iwara-mpv-fab:active {
@@ -41,7 +59,7 @@ export function injectGlobalStyles() {
             display: block;
         }
         #iwara-mpv-settings-fab:hover {
-            box-shadow: 0 8px 24px rgba(102, 126, 234, 0.7);
+            box-shadow: 0 8px 24px rgba(97, 175, 239, 0.6);
         }
         #iwara-mpv-settings-fab:hover svg {
             transform: rotate(90deg);
@@ -65,13 +83,13 @@ export function injectGlobalStyles() {
             display: flex;
             align-items: center;
             justify-content: center;
-            box-shadow: 0 4px 16px rgba(102, 126, 234, 0.4);
+            box-shadow: 0 4px 16px rgba(97, 175, 239, 0.22);
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             border: 2px solid;
             backdrop-filter: blur(10px);
         }
         #iwara-mpv-button-group-detail button:hover {
-            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+            box-shadow: 0 6px 20px rgba(97, 175, 239, 0.3);
             transform: translateY(-2px) scale(1.05);
         }
         #iwara-mpv-button-group-detail button:active {
@@ -83,40 +101,40 @@ export function injectGlobalStyles() {
         }
         #iwara-mpv-button-group-detail .copy-btn {
             background: rgba(255, 255, 255, 0.95);
-            color: #667eea;
-            border-color: #667eea;
+            color: var(--iwara-accent);
+            border-color: var(--iwara-accent);
         }
         #iwara-mpv-button-group-detail .copy-btn:hover {
-            background: #667eea;
+            background: var(--iwara-accent);
             color: #fff;
         }
         #iwara-mpv-button-group-detail .new-tab-btn {
             background: rgba(255, 255, 255, 0.95);
-            color: #51cf66;
-            border-color: #51cf66;
+            color: var(--iwara-green);
+            border-color: var(--iwara-green);
         }
         #iwara-mpv-button-group-detail .new-tab-btn:hover {
-            background: #51cf66;
+            background: var(--iwara-green);
             color: #fff;
         }
         #iwara-mpv-button-group-detail .quality-btn {
             background: rgba(255, 255, 255, 0.95);
-            color: #ffa500;
-            border-color: #ffa500;
+            color: var(--iwara-orange);
+            border-color: var(--iwara-orange);
             font-size: 14px;
             font-weight: bold;
         }
         #iwara-mpv-button-group-detail .quality-btn:hover {
-            background: #ffa500;
+            background: var(--iwara-orange);
             color: #fff;
         }
         #iwara-mpv-button-group-detail .play-btn {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, var(--iwara-accent) 0%, var(--iwara-cyan) 100%);
             color: #fff;
-            border-color: #667eea;
+            border-color: var(--iwara-accent);
         }
         #iwara-mpv-button-group-detail .play-btn:hover {
-            box-shadow: 0 6px 16px rgba(102, 126, 234, 0.7);
+            box-shadow: 0 6px 16px rgba(97, 175, 239, 0.45);
         }
 
         /* 悬停按钮容器 - 2x2 网格布局 */
@@ -168,46 +186,46 @@ export function injectGlobalStyles() {
         /* 复制按钮 */
         .iwara-mpv-action-btn.copy {
             background: rgba(255, 255, 255, 0.95);
-            color: #667eea;
-            border-color: #667eea;
+            color: var(--iwara-accent);
+            border-color: var(--iwara-accent);
         }
         .iwara-mpv-action-btn.copy:hover {
-            background: #667eea;
+            background: var(--iwara-accent);
             color: #fff;
         }
 
         /* 新标签页播放按钮 */
         .iwara-mpv-action-btn.new-tab {
             background: rgba(255, 255, 255, 0.95);
-            color: #51cf66;
-            border-color: #51cf66;
+            color: var(--iwara-green);
+            border-color: var(--iwara-green);
         }
         .iwara-mpv-action-btn.new-tab:hover {
-            background: #51cf66;
+            background: var(--iwara-green);
             color: #fff;
         }
 
         /* 画质按钮 */
         .iwara-mpv-action-btn.quality {
             background: rgba(255, 255, 255, 0.95);
-            color: #ffa500;
-            border-color: #ffa500;
+            color: var(--iwara-orange);
+            border-color: var(--iwara-orange);
             font-size: 14px;
             font-weight: bold;
         }
         .iwara-mpv-action-btn.quality:hover {
-            background: #ffa500;
+            background: var(--iwara-orange);
             color: #fff;
         }
 
         /* 播放按钮 */
         .iwara-mpv-button-group .iwara-mpv-hover-button {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, var(--iwara-accent) 0%, var(--iwara-cyan) 100%);
             color: #fff;
-            border-color: #667eea;
+            border-color: var(--iwara-accent);
         }
         .iwara-mpv-button-group .iwara-mpv-hover-button:hover {
-            box-shadow: 0 6px 16px rgba(102, 126, 234, 0.7);
+            box-shadow: 0 6px 16px rgba(97, 175, 239, 0.45);
         }
         .iwara-mpv-button-group .iwara-mpv-hover-button svg {
             width: 20px;
@@ -222,7 +240,7 @@ export function injectGlobalStyles() {
             background: rgba(255, 255, 255, 0.05);
             border: 2px solid rgba(255, 255, 255, 0.1);
             border-radius: 8px;
-            color: #e0e0e0;
+            color: var(--iwara-text);
             font-size: 14px;
             font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
             transition: all 0.2s;
@@ -231,12 +249,12 @@ export function injectGlobalStyles() {
         .iwara-form-input:focus,
         .iwara-form-textarea:focus {
             outline: none;
-            border-color: #667eea;
+            border-color: var(--iwara-accent);
             background: rgba(255, 255, 255, 0.08);
         }
         .iwara-form-input::placeholder,
         .iwara-form-textarea::placeholder {
-            color: #666;
+            color: var(--iwara-muted);
         }
         .iwara-form-textarea {
             resize: vertical;
@@ -263,8 +281,8 @@ export function injectGlobalStyles() {
             user-select: none;
         }
         .iwara-checkbox-label:hover {
-            background: rgba(102, 126, 234, 0.1);
-            border-color: rgba(102, 126, 234, 0.3);
+            background: rgba(97, 175, 239, 0.10);
+            border-color: rgba(97, 175, 239, 0.28);
         }
         .iwara-checkbox-label input[type="checkbox"] {
             appearance: none;
@@ -280,11 +298,11 @@ export function injectGlobalStyles() {
             flex-shrink: 0;
         }
         .iwara-checkbox-label input[type="checkbox"]:hover {
-            border-color: #667eea;
+            border-color: var(--iwara-accent);
         }
         .iwara-checkbox-label input[type="checkbox"]:checked {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border-color: #667eea;
+            background: linear-gradient(135deg, var(--iwara-accent) 0%, var(--iwara-cyan) 100%);
+            border-color: var(--iwara-accent);
         }
         .iwara-checkbox-label input[type="checkbox"]:checked::after {
             content: '✓';
@@ -297,16 +315,16 @@ export function injectGlobalStyles() {
             font-weight: bold;
         }
         .iwara-checkbox-label span {
-            color: #94a3b8;
+            color: var(--iwara-text);
             font-size: 13px;
             font-weight: 500;
             transition: color 0.2s;
         }
         .iwara-checkbox-label:hover span {
-            color: #cbd5e1;
+            color: var(--iwara-text-strong);
         }
         .iwara-checkbox-label input[type="checkbox"]:checked + span {
-            color: #e2e8f0;
+            color: var(--iwara-text-strong);
         }
         .iwara-settings-subsection {
             margin-bottom: 16px;
@@ -319,7 +337,7 @@ export function injectGlobalStyles() {
             border-bottom: none;
         }
         .iwara-settings-subsection h5 {
-            color: #cbd5e1;
+            color: var(--iwara-text-strong);
             margin: 0 0 10px 0;
             font-size: 14px;
             font-weight: 600;
@@ -328,7 +346,7 @@ export function injectGlobalStyles() {
             gap: 6px;
         }
         .iwara-settings-section-title {
-            color: #e2e8f0;
+            color: var(--iwara-text-strong);
             margin: 0 0 20px 0;
             font-size: 17px;
             font-weight: 700;
@@ -349,7 +367,7 @@ export function injectGlobalStyles() {
             transform: translateY(-50%);
             width: 4px;
             height: 20px;
-            background: linear-gradient(to bottom, #667eea, #764ba2);
+            background: linear-gradient(to bottom, var(--iwara-accent), var(--iwara-cyan));
             border-radius: 2px;
         }
         .iwara-settings-section-title.no-indicator {
@@ -364,7 +382,7 @@ export function injectGlobalStyles() {
             background: transparent;
             border-radius: 0;
             border: none;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+            border-bottom: 1px solid var(--iwara-border);
             position: relative;
         }
         .iwara-settings-section::before {
@@ -374,7 +392,7 @@ export function injectGlobalStyles() {
             right: 0;
             bottom: -1px;
             height: 1px;
-            background: linear-gradient(90deg, transparent, rgba(102, 126, 234, 0.3), transparent);
+            background: linear-gradient(90deg, transparent, rgba(97, 175, 239, 0.28), transparent);
             opacity: 0;
             transition: opacity 0.3s;
         }
@@ -398,7 +416,7 @@ export function injectGlobalStyles() {
             margin: -4px 0 14px 0;
         }
         .iwara-settings-header h4 {
-            color: #e2e8f0;
+            color: var(--iwara-text-strong);
             margin: 0;
             font-size: 16px;
             font-weight: 600;
@@ -434,7 +452,7 @@ export function injectGlobalStyles() {
 
         /* 新设计：左右分栏容器 */
         .iwara-modal-content {
-            background: #1a1d2e;
+            background: var(--iwara-panel);
             border-radius: 10px;
             width: 900px;
             max-width: 1100px;
@@ -464,8 +482,8 @@ export function injectGlobalStyles() {
         /* 左侧边栏 */
         .iwara-modal-sidebar {
             width: 200px;
-            background: #15172b;
-            border-right: 1px solid rgba(255, 255, 255, 0.06);
+            background: var(--iwara-bg-2);
+            border-right: 1px solid var(--iwara-border);
             display: flex;
             flex-direction: column;
             overflow-y: auto;
@@ -497,7 +515,7 @@ export function injectGlobalStyles() {
             top: 0;
             bottom: 0;
             width: 3px;
-            background: linear-gradient(to bottom, #667eea, #764ba2);
+            background: linear-gradient(to bottom, var(--iwara-accent), var(--iwara-cyan));
             transform: scaleY(0);
             transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             border-radius: 0 2px 2px 0;
@@ -506,15 +524,15 @@ export function injectGlobalStyles() {
             content: '';
             position: absolute;
             inset: 0;
-            background: linear-gradient(135deg, rgba(102, 126, 234, 0.08), rgba(118, 75, 162, 0.05));
+            background: linear-gradient(135deg, rgba(97, 175, 239, 0.10), rgba(86, 182, 194, 0.08));
             opacity: 0;
             transition: opacity 0.3s;
             border-radius: 12px;
         }
         .iwara-sidebar-player-item:hover {
-            border-color: rgba(102, 126, 234, 0.25);
+            border-color: rgba(97, 175, 239, 0.22);
             transform: translateX(4px);
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.12);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
         }
         .iwara-sidebar-player-item:hover::before {
             transform: scaleY(1);
@@ -523,9 +541,9 @@ export function injectGlobalStyles() {
             opacity: 1;
         }
         .iwara-sidebar-player-item.active {
-            background: linear-gradient(135deg, rgba(102, 126, 234, 0.18), rgba(118, 75, 162, 0.12));
-            border-color: rgba(102, 126, 234, 0.45);
-            box-shadow: 0 4px 16px rgba(102, 126, 234, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            background: linear-gradient(135deg, rgba(97, 175, 239, 0.16), rgba(86, 182, 194, 0.10));
+            border-color: rgba(97, 175, 239, 0.45);
+            box-shadow: 0 4px 16px rgba(97, 175, 239, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.1);
             transform: translateX(4px);
         }
         .iwara-sidebar-player-item.active::before {
@@ -550,14 +568,14 @@ export function injectGlobalStyles() {
             box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2);
         }
         .iwara-sidebar-player-item:hover .iwara-sidebar-player-icon {
-            background: linear-gradient(135deg, rgba(102, 126, 234, 0.15), rgba(118, 75, 162, 0.1));
+            background: linear-gradient(135deg, rgba(97, 175, 239, 0.14), rgba(86, 182, 194, 0.10));
             transform: scale(1.08) rotate(-5deg);
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.25), inset 0 1px 2px rgba(255, 255, 255, 0.1);
+            box-shadow: 0 4px 12px rgba(97, 175, 239, 0.18), inset 0 1px 2px rgba(255, 255, 255, 0.1);
         }
         .iwara-sidebar-player-item.active .iwara-sidebar-player-icon {
-            background: linear-gradient(135deg, rgba(102, 126, 234, 0.25), rgba(118, 75, 162, 0.18));
+            background: linear-gradient(135deg, rgba(97, 175, 239, 0.22), rgba(86, 182, 194, 0.14));
             transform: scale(1.05);
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.35), inset 0 1px 2px rgba(255, 255, 255, 0.15);
+            box-shadow: 0 4px 12px rgba(97, 175, 239, 0.24), inset 0 1px 2px rgba(255, 255, 255, 0.15);
         }
         .iwara-sidebar-player-icon img {
             width: 30px;
@@ -577,7 +595,7 @@ export function injectGlobalStyles() {
         .iwara-sidebar-player-name {
             font-size: 14px;
             font-weight: 600;
-            color: #cbd5e1;
+            color: var(--iwara-text);
             margin: 0 0 3px 0;
             white-space: nowrap;
             overflow: hidden;
@@ -586,16 +604,16 @@ export function injectGlobalStyles() {
             letter-spacing: 0.2px;
         }
         .iwara-sidebar-player-item:hover .iwara-sidebar-player-name {
-            color: #e0e7ff;
+            color: var(--iwara-text-strong);
             transform: translateX(2px);
         }
         .iwara-sidebar-player-item.active .iwara-sidebar-player-name {
-            color: #e0e7ff;
+            color: var(--iwara-text-strong);
             font-weight: 700;
         }
         .iwara-sidebar-player-desc {
             font-size: 11px;
-            color: #64748b;
+            color: var(--iwara-muted);
             margin: 0;
             white-space: nowrap;
             overflow: hidden;
@@ -603,18 +621,18 @@ export function injectGlobalStyles() {
             transition: all 0.3s;
         }
         .iwara-sidebar-player-item:hover .iwara-sidebar-player-desc {
-            color: #94a3b8;
+            color: var(--iwara-text);
             transform: translateX(2px);
         }
         .iwara-sidebar-player-item.active .iwara-sidebar-player-desc {
-            color: #a78bfa;
+            color: var(--iwara-cyan);
             font-weight: 500;
         }
 
         /* 左侧底部 - 设置 */
         .iwara-sidebar-footer {
             padding: 16px;
-            border-top: 1px solid rgba(255, 255, 255, 0.06);
+            border-top: 1px solid var(--iwara-border);
             background: linear-gradient(to top, rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.15));
             height: 86px;
             box-sizing: border-box;
@@ -629,7 +647,7 @@ export function injectGlobalStyles() {
             left: 0;
             right: 0;
             height: 1px;
-            background: linear-gradient(90deg, transparent, rgba(102, 126, 234, 0.3), transparent);
+            background: linear-gradient(90deg, transparent, rgba(97, 175, 239, 0.28), transparent);
         }
         .iwara-sidebar-main-settings {
             display: flex;
@@ -648,7 +666,7 @@ export function injectGlobalStyles() {
             content: '';
             position: absolute;
             inset: 0;
-            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
+            background: linear-gradient(135deg, rgba(97, 175, 239, 0.10), rgba(86, 182, 194, 0.08));
             opacity: 0;
             transition: opacity 0.3s;
             border-radius: 12px;
@@ -657,14 +675,14 @@ export function injectGlobalStyles() {
             opacity: 1;
         }
         .iwara-sidebar-main-settings:hover {
-            border-color: rgba(102, 126, 234, 0.25);
+            border-color: rgba(97, 175, 239, 0.22);
             transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+            box-shadow: 0 4px 12px rgba(97, 175, 239, 0.14);
         }
         .iwara-sidebar-main-settings.active {
-            background: linear-gradient(135deg, rgba(102, 126, 234, 0.18), rgba(118, 75, 162, 0.15));
-            border-color: rgba(102, 126, 234, 0.45);
-            box-shadow: 0 4px 16px rgba(102, 126, 234, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            background: linear-gradient(135deg, rgba(97, 175, 239, 0.16), rgba(86, 182, 194, 0.10));
+            border-color: rgba(97, 175, 239, 0.45);
+            box-shadow: 0 4px 16px rgba(97, 175, 239, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.1);
         }
         .iwara-sidebar-main-settings.active::before {
             opacity: 0;
@@ -679,37 +697,37 @@ export function injectGlobalStyles() {
             font-size: 20px;
             background: rgba(255, 255, 255, 0.05);
             border-radius: 10px;
-            color: #94a3b8;
+            color: var(--iwara-muted);
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             position: relative;
             z-index: 1;
             box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2);
         }
         .iwara-sidebar-main-settings:hover .iwara-sidebar-main-icon {
-            background: linear-gradient(135deg, rgba(102, 126, 234, 0.2), rgba(118, 75, 162, 0.15));
-            color: #a78bfa;
+            background: linear-gradient(135deg, rgba(97, 175, 239, 0.18), rgba(86, 182, 194, 0.12));
+            color: var(--iwara-cyan);
             transform: scale(1.05);
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3), inset 0 1px 2px rgba(255, 255, 255, 0.1);
+            box-shadow: 0 4px 12px rgba(97, 175, 239, 0.20), inset 0 1px 2px rgba(255, 255, 255, 0.1);
         }
         .iwara-sidebar-main-settings.active .iwara-sidebar-main-icon {
-            background: linear-gradient(135deg, rgba(102, 126, 234, 0.3), rgba(118, 75, 162, 0.25));
-            color: #c4b5fd;
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4), inset 0 1px 2px rgba(255, 255, 255, 0.15);
+            background: linear-gradient(135deg, rgba(97, 175, 239, 0.24), rgba(86, 182, 194, 0.16));
+            color: var(--iwara-text-strong);
+            box-shadow: 0 4px 12px rgba(97, 175, 239, 0.26), inset 0 1px 2px rgba(255, 255, 255, 0.15);
         }
         .iwara-sidebar-main-text {
             font-size: 14px;
             font-weight: 600;
-            color: #94a3b8;
+            color: var(--iwara-muted);
             transition: all 0.3s;
             position: relative;
             z-index: 1;
             letter-spacing: 0.3px;
         }
         .iwara-sidebar-main-settings:hover .iwara-sidebar-main-text {
-            color: #e0e7ff;
+            color: var(--iwara-text-strong);
         }
         .iwara-sidebar-main-settings.active .iwara-sidebar-main-text {
-            color: #e0e7ff;
+            color: var(--iwara-text-strong);
         }
 
         /* 右侧内容区 */
@@ -723,7 +741,7 @@ export function injectGlobalStyles() {
         /* 内容顶部标题栏 */
         .iwara-content-header {
             padding: 20px 32px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+            border-bottom: 1px solid var(--iwara-border);
             background: rgba(0, 0, 0, 0.2);
             display: flex;
             justify-content: space-between;
@@ -733,7 +751,7 @@ export function injectGlobalStyles() {
         .iwara-content-title {
             font-size: 18px;
             font-weight: 600;
-            color: #e2e8f0;
+            color: var(--iwara-text-strong);
             margin: 0;
             line-height: 1.4;
         }
@@ -744,10 +762,10 @@ export function injectGlobalStyles() {
         }
         .iwara-btn-delete-player {
             padding: 8px 18px;
-            background: rgba(255, 59, 48, 0.15);
-            border: 1px solid rgba(255, 59, 48, 0.4);
+            background: rgba(224, 108, 117, 0.16);
+            border: 1px solid rgba(224, 108, 117, 0.45);
             border-radius: 8px;
-            color: #ff3b30;
+            color: var(--iwara-red);
             font-size: 14px;
             font-weight: 600;
             cursor: pointer;
@@ -759,14 +777,14 @@ export function injectGlobalStyles() {
             line-height: 1;
         }
         .iwara-btn-delete-player:hover {
-            background: rgba(255, 59, 48, 0.25);
-            border-color: rgba(255, 59, 48, 0.6);
+            background: rgba(224, 108, 117, 0.26);
+            border-color: rgba(224, 108, 117, 0.65);
             transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(255, 59, 48, 0.3);
+            box-shadow: 0 4px 12px rgba(224, 108, 117, 0.28);
         }
         .iwara-btn-create-player {
             padding: 8px 18px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, var(--iwara-accent) 0%, var(--iwara-cyan) 100%);
             border: none;
             border-radius: 8px;
             color: #fff;
@@ -782,7 +800,7 @@ export function injectGlobalStyles() {
         }
         .iwara-btn-create-player:hover {
             transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+            box-shadow: 0 4px 12px rgba(97, 175, 239, 0.28);
         }
 
         /* 内容主体 */
@@ -795,7 +813,7 @@ export function injectGlobalStyles() {
         /* 内容底部 - 按钮区 */
         .iwara-content-footer {
             padding: 16px 32px;
-            border-top: 1px solid rgba(255, 255, 255, 0.06);
+            border-top: 1px solid var(--iwara-border);
             background: rgba(0, 0, 0, 0.2);
             height: 86px;
             box-sizing: border-box;
@@ -824,7 +842,7 @@ export function injectGlobalStyles() {
         }
         .iwara-btn-cancel {
             background: rgba(255, 255, 255, 0.08);
-            color: #cbd5e1;
+            color: var(--iwara-text);
             border: 1px solid rgba(255, 255, 255, 0.1);
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             position: relative;
@@ -834,16 +852,16 @@ export function injectGlobalStyles() {
             content: '';
             position: absolute;
             inset: 0;
-            background: linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(220, 38, 38, 0.1));
+            background: linear-gradient(135deg, rgba(224, 108, 117, 0.16), rgba(190, 80, 70, 0.10));
             opacity: 0;
             transition: opacity 0.3s;
         }
         .iwara-btn-cancel:hover {
-            background: rgba(239, 68, 68, 0.15);
-            border-color: rgba(239, 68, 68, 0.4);
-            color: #fca5a5;
+            background: rgba(224, 108, 117, 0.16);
+            border-color: rgba(224, 108, 117, 0.45);
+            color: var(--iwara-text-strong);
             transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.25);
+            box-shadow: 0 4px 12px rgba(224, 108, 117, 0.22);
         }
         .iwara-btn-cancel:hover::before {
             opacity: 1;
@@ -852,37 +870,37 @@ export function injectGlobalStyles() {
             transform: translateY(0);
         }
         .iwara-btn-secondary {
-            background: rgba(102, 126, 234, 0.2);
-            border: 2px solid rgba(102, 126, 234, 0.5);
-            color: #667eea;
+            background: rgba(97, 175, 239, 0.18);
+            border: 2px solid rgba(97, 175, 239, 0.45);
+            color: var(--iwara-accent);
         }
         .iwara-btn-secondary:hover {
-            background: rgba(102, 126, 234, 0.3);
-            border-color: #667eea;
+            background: rgba(97, 175, 239, 0.26);
+            border-color: rgba(97, 175, 239, 0.65);
             transform: translateY(-2px);
         }
         .iwara-btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, var(--iwara-accent) 0%, var(--iwara-cyan) 100%);
             color: #fff;
         }
         .iwara-btn-primary:hover {
             transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+            box-shadow: 0 4px 12px rgba(97, 175, 239, 0.28);
         }
         .iwara-btn-small {
             padding: 6px 14px;
-            background: rgba(102, 126, 234, 0.2);
-            border: 1px solid rgba(102, 126, 234, 0.4);
+            background: rgba(97, 175, 239, 0.18);
+            border: 1px solid rgba(97, 175, 239, 0.35);
             border-radius: 6px;
-            color: #667eea;
+            color: var(--iwara-accent);
             font-size: 13px;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.2s;
         }
         .iwara-btn-small:hover {
-            background: rgba(102, 126, 234, 0.3);
-            border-color: #667eea;
+            background: rgba(97, 175, 239, 0.26);
+            border-color: rgba(97, 175, 239, 0.55);
         }
 
         /* ========== 设置页面专用样式 ========== */
@@ -894,7 +912,7 @@ export function injectGlobalStyles() {
         }
         .iwara-settings-section h3 {
             margin: 0 0 20px 0;
-            color: #e2e8f0;
+            color: var(--iwara-text-strong);
             font-size: 17px;
             font-weight: 700;
             position: relative;
@@ -909,12 +927,12 @@ export function injectGlobalStyles() {
             transform: translateY(-50%);
             width: 4px;
             height: 20px;
-            background: linear-gradient(to bottom, #667eea, #764ba2);
+            background: linear-gradient(to bottom, var(--iwara-accent), var(--iwara-cyan));
             border-radius: 2px;
         }
         .iwara-hint {
             margin: 8px 0 0 0;
-            color: #999;
+            color: var(--iwara-subtle);
             font-size: 12px;
         }
 
@@ -937,11 +955,11 @@ export function injectGlobalStyles() {
         }
         .iwara-player-option:hover {
             background: rgba(255, 255, 255, 0.08);
-            border-color: rgba(102, 126, 234, 0.5);
+            border-color: rgba(97, 175, 239, 0.45);
         }
         .iwara-player-option.active {
-            background: rgba(102, 126, 234, 0.15);
-            border-color: #667eea;
+            background: rgba(97, 175, 239, 0.14);
+            border-color: rgba(97, 175, 239, 0.65);
         }
         .iwara-player-option input[type="radio"] {
             margin-right: 12px;
@@ -957,11 +975,11 @@ export function injectGlobalStyles() {
             gap: 2px;
         }
         .iwara-option-text strong {
-            color: #e0e0e0;
+            color: var(--iwara-text-strong);
             font-size: 14px;
         }
         .iwara-option-text small {
-            color: #999;
+            color: var(--iwara-subtle);
             font-size: 12px;
         }
         .iwara-player-actions {
@@ -985,8 +1003,8 @@ export function injectGlobalStyles() {
             opacity: 0.8;
         }
         .iwara-edit-btn:hover {
-            background: rgba(102, 126, 234, 0.3);
-            border-color: rgba(102, 126, 234, 0.6);
+            background: rgba(97, 175, 239, 0.22);
+            border-color: rgba(97, 175, 239, 0.55);
             opacity: 1;
             transform: scale(1.1);
         }
@@ -1019,11 +1037,11 @@ export function injectGlobalStyles() {
         }
         .iwara-quality-option:hover {
             background: rgba(255, 255, 255, 0.08);
-            border-color: rgba(102, 126, 234, 0.5);
+            border-color: rgba(97, 175, 239, 0.45);
         }
         .iwara-quality-option.active {
-            background: rgba(102, 126, 234, 0.15);
-            border-color: #667eea;
+            background: rgba(97, 175, 239, 0.14);
+            border-color: rgba(97, 175, 239, 0.65);
         }
         .iwara-quality-option input[type="radio"] {
             margin-right: 12px;
@@ -1047,11 +1065,11 @@ export function injectGlobalStyles() {
             border-radius: 3px;
         }
         .iwara-proxy-list::-webkit-scrollbar-thumb {
-            background: rgba(102, 126, 234, 0.5);
+            background: rgba(97, 175, 239, 0.45);
             border-radius: 3px;
         }
         .iwara-proxy-list::-webkit-scrollbar-thumb:hover {
-            background: rgba(102, 126, 234, 0.7);
+            background: rgba(97, 175, 239, 0.62);
         }
 
         /* ========== 统一滚动条样式 ========== */
@@ -1070,7 +1088,7 @@ export function injectGlobalStyles() {
         .iwara-modal-sidebar::-webkit-scrollbar-thumb,
         .iwara-sidebar-players::-webkit-scrollbar-thumb,
         .iwara-content-body::-webkit-scrollbar-thumb {
-            background: rgba(102, 126, 234, 0.4);
+            background: rgba(97, 175, 239, 0.32);
             border-radius: 4px;
             border: 2px solid transparent;
             background-clip: padding-box;
@@ -1079,13 +1097,13 @@ export function injectGlobalStyles() {
         .iwara-modal-sidebar::-webkit-scrollbar-thumb:hover,
         .iwara-sidebar-players::-webkit-scrollbar-thumb:hover,
         .iwara-content-body::-webkit-scrollbar-thumb:hover {
-            background: rgba(102, 126, 234, 0.6);
+            background: rgba(97, 175, 239, 0.48);
             background-clip: padding-box;
         }
         .iwara-modal-sidebar::-webkit-scrollbar-thumb:active,
         .iwara-sidebar-players::-webkit-scrollbar-thumb:active,
         .iwara-content-body::-webkit-scrollbar-thumb:active {
-            background: rgba(102, 126, 234, 0.8);
+            background: rgba(97, 175, 239, 0.62);
             background-clip: padding-box;
         }
 
@@ -1101,20 +1119,20 @@ export function injectGlobalStyles() {
         }
         .iwara-proxy-item:hover {
             background: rgba(255, 255, 255, 0.08);
-            border-color: rgba(102, 126, 234, 0.3);
+            border-color: rgba(97, 175, 239, 0.30);
         }
         .iwara-proxy-item.disabled {
             opacity: 0.5;
         }
         .iwara-proxy-item .proxy-url {
             flex: 1;
-            color: #e0e0e0;
+            color: var(--iwara-text);
             font-size: 13px;
             font-family: 'Consolas', 'Monaco', monospace;
             word-break: break-all;
         }
         .iwara-proxy-item.disabled .proxy-url {
-            color: #999;
+            color: var(--iwara-subtle);
             text-decoration: line-through;
         }
         .iwara-proxy-status {
@@ -1128,31 +1146,31 @@ export function injectGlobalStyles() {
             text-align: center;
         }
         .iwara-proxy-status.checking {
-            background: rgba(102, 126, 234, 0.2);
-            border-color: rgba(102, 126, 234, 0.4);
-            color: #667eea;
+            background: rgba(97, 175, 239, 0.16);
+            border-color: rgba(97, 175, 239, 0.40);
+            color: var(--iwara-accent);
         }
         .iwara-proxy-status.success {
-            background: rgba(81, 207, 102, 0.2);
-            border-color: rgba(81, 207, 102, 0.4);
-            color: #51cf66;
+            background: rgba(152, 195, 121, 0.16);
+            border-color: rgba(152, 195, 121, 0.40);
+            color: var(--iwara-green);
         }
         .iwara-proxy-status.failed {
-            background: rgba(255, 107, 107, 0.2);
-            border-color: rgba(255, 107, 107, 0.4);
-            color: #ff6b6b;
+            background: rgba(224, 108, 117, 0.16);
+            border-color: rgba(224, 108, 117, 0.40);
+            color: var(--iwara-red);
         }
         .iwara-proxy-status.slow {
-            background: rgba(255, 165, 0, 0.2);
-            border-color: rgba(255, 165, 0, 0.4);
-            color: #ffa500;
+            background: rgba(209, 154, 102, 0.16);
+            border-color: rgba(209, 154, 102, 0.40);
+            color: var(--iwara-orange);
         }
         .iwara-proxy-toggle {
             padding: 4px 12px;
-            background: rgba(81, 207, 102, 0.2);
-            border: 1px solid rgba(81, 207, 102, 0.4);
+            background: rgba(152, 195, 121, 0.16);
+            border: 1px solid rgba(152, 195, 121, 0.40);
             border-radius: 6px;
-            color: #51cf66;
+            color: var(--iwara-green);
             font-size: 11px;
             font-weight: 600;
             cursor: pointer;
@@ -1160,40 +1178,40 @@ export function injectGlobalStyles() {
             white-space: nowrap;
         }
         .iwara-proxy-toggle:hover {
-            background: rgba(81, 207, 102, 0.3);
-            border-color: #51cf66;
+            background: rgba(152, 195, 121, 0.26);
+            border-color: rgba(152, 195, 121, 0.65);
             transform: scale(1.05);
         }
         .iwara-proxy-toggle.disabled {
-            background: rgba(255, 107, 107, 0.2);
-            border-color: rgba(255, 107, 107, 0.4);
-            color: #ff6b6b;
+            background: rgba(224, 108, 117, 0.16);
+            border-color: rgba(224, 108, 117, 0.40);
+            color: var(--iwara-red);
         }
         .iwara-proxy-toggle.disabled:hover {
-            background: rgba(255, 107, 107, 0.3);
-            border-color: #ff6b6b;
+            background: rgba(224, 108, 117, 0.26);
+            border-color: rgba(224, 108, 117, 0.65);
         }
         .iwara-proxy-delete {
             padding: 4px 8px;
-            background: rgba(255, 59, 48, 0.15);
-            border: 1px solid rgba(255, 59, 48, 0.4);
+            background: rgba(224, 108, 117, 0.16);
+            border: 1px solid rgba(224, 108, 117, 0.45);
             border-radius: 6px;
-            color: #ff3b30;
+            color: var(--iwara-red);
             font-size: 14px;
             cursor: pointer;
             transition: all 0.2s;
             line-height: 1;
         }
         .iwara-proxy-delete:hover {
-            background: rgba(255, 59, 48, 0.3);
-            border-color: #ff3b30;
+            background: rgba(224, 108, 117, 0.26);
+            border-color: rgba(224, 108, 117, 0.65);
             transform: scale(1.1);
         }
 
         /* Select 下拉框样式 */
         select.iwara-form-input {
             cursor: pointer;
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23667eea' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2361afef' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
             background-repeat: no-repeat;
             background-position: right 12px center;
             padding-right: 36px;
@@ -1202,15 +1220,15 @@ export function injectGlobalStyles() {
             -moz-appearance: none;
         }
         select.iwara-form-input:hover {
-            border-color: rgba(102, 126, 234, 0.5);
+            border-color: rgba(97, 175, 239, 0.45);
         }
         select.iwara-form-input option {
-            background: #1a1a2e;
-            color: #e0e0e0;
+            background: var(--iwara-bg-2);
+            color: var(--iwara-text);
             padding: 10px;
         }
         select.iwara-form-input option:hover {
-            background: #667eea;
+            background: var(--iwara-accent);
         }
     `);
 }

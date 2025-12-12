@@ -86,6 +86,29 @@ export function getCurrentProxyPrefix() {
 }
 
 export function createProxyApi({ getProxyList }) {
+  function pickProxyPrefix() {
+    const currentHostname = window.location.hostname;
+    const isIwaraDomain =
+      currentHostname === 'iwara.tv' ||
+      currentHostname === 'www.iwara.tv' ||
+      currentHostname.endsWith('.iwara.tv');
+
+    if (!isIwaraDomain) return getCurrentProxyPrefix() || '';
+
+    const proxyList = (typeof getProxyList === 'function' ? getProxyList() : []) || [];
+    const enabledProxies = proxyList.filter((p) => p?.enabled);
+    if (enabledProxies.length === 0) return '';
+
+    const randomIndex = Math.floor(Math.random() * enabledProxies.length);
+    const selectedProxy = enabledProxies[randomIndex];
+    return selectedProxy?.url || '';
+  }
+
+  function proxifyWithPrefix(prefix, url) {
+    if (!prefix) return url;
+    return prefix + url;
+  }
+
   function getProxiedUrl(videoUrl) {
     const currentHostname = window.location.hostname;
     const isIwaraDomain =
@@ -145,6 +168,8 @@ export function createProxyApi({ getProxyList }) {
   return {
     normalizeProxyUrl,
     getCurrentProxyPrefix,
+    pickProxyPrefix,
+    proxifyWithPrefix,
     getProxiedUrl
   };
 }

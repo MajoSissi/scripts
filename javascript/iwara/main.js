@@ -50,7 +50,8 @@ const notify = createNotifier(() => proxyList);
 const proxyApi = createProxyApi({ getProxyList: () => proxyList });
 
 const videoApi = createVideoApi({
-  getCurrentProxyPrefix: proxyApi.getCurrentProxyPrefix,
+  pickProxyPrefix: proxyApi.pickProxyPrefix,
+  proxifyWithPrefix: proxyApi.proxifyWithPrefix,
   getProxiedUrl: proxyApi.getProxiedUrl,
   getExternalPlayer: () => externalPlayer,
   getPlayers: () => players,

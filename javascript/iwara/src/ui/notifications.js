@@ -5,14 +5,22 @@ const activeNotifications = new Set();
  * @param {() => Array<{url: string, enabled: boolean}>} getProxyList
  */
 export function createNotifier(getProxyList) {
-  /** @param {string} message */
-  function withProxyHint(message) {
+  /**
+   * @param {string} message
+   * @param {{ proxyPrefix?: string, proxyUrl?: string, proxyHostname?: string } | undefined} meta
+   */
+  function withProxyHint(message, meta) {
     try {
-      const enabledProxies = (getProxyList?.() || []).filter((p) => p?.enabled);
-      if (!enabledProxies.length) return message;
-      const currentProxy = enabledProxies[Math.floor(Math.random() * enabledProxies.length)];
-      const hostname = new URL(currentProxy.url).hostname;
-      return `${message}\n🔗 当前代理: ${hostname}`;
+      const hostname =
+        (typeof meta?.proxyHostname === 'string' && meta.proxyHostname.trim()) ||
+        (typeof meta?.proxyUrl === 'string' && meta.proxyUrl.trim() && new URL(meta.proxyUrl).hostname) ||
+        (typeof meta?.proxyPrefix === 'string' && meta.proxyPrefix.trim() && new URL(meta.proxyPrefix).hostname);
+
+      if (!hostname) return message;
+
+      const enabledCount = (getProxyList?.() || []).filter((p) => p?.enabled).length;
+      const suffix = enabledCount > 1 ? ` (已启用 ${enabledCount} 个，随机；一次操作内固定)` : '';
+      return `${message}\n🔗 本次代理: ${hostname}${suffix}`;
     } catch {
       return message;
     }
@@ -21,25 +29,26 @@ export function createNotifier(getProxyList) {
   /**
    * @param {string} message
    * @param {'info'|'success'|'error'} [type]
+   * @param {{ proxyPrefix?: string, proxyUrl?: string, proxyHostname?: string }} [meta]
    */
-  function notify(message, type = 'info') {
-    message = withProxyHint(message);
+  function notify(message, type = 'info', meta) {
+    message = withProxyHint(message, meta);
 
     const styles = {
       error: {
-        bg: 'linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%)',
-        glow: 'rgba(255, 107, 107, 0.5)',
-        glowStrong: 'rgba(255, 107, 107, 0.8)'
+        bg: 'linear-gradient(135deg, #e06c75 0%, #be5046 100%)',
+        glow: 'rgba(224, 108, 117, 0.45)',
+        glowStrong: 'rgba(224, 108, 117, 0.75)'
       },
       success: {
-        bg: 'linear-gradient(135deg, #51cf66 0%, #37b24d 100%)',
-        glow: 'rgba(81, 207, 102, 0.5)',
-        glowStrong: 'rgba(81, 207, 102, 0.8)'
+        bg: 'linear-gradient(135deg, #98c379 0%, #7bbd6a 100%)',
+        glow: 'rgba(152, 195, 121, 0.45)',
+        glowStrong: 'rgba(152, 195, 121, 0.75)'
       },
       info: {
-        bg: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-        glow: 'rgba(102, 126, 234, 0.5)',
-        glowStrong: 'rgba(102, 126, 234, 0.8)'
+        bg: 'linear-gradient(135deg, #61afef 0%, #56b6c2 100%)',
+        glow: 'rgba(97, 175, 239, 0.45)',
+        glowStrong: 'rgba(97, 175, 239, 0.75)'
       }
     };
 

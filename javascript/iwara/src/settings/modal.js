@@ -470,16 +470,19 @@ export function createSettingsModal(deps) {
               <input type="text" id="new-proxy-input" placeholder="多个将会随机选取, 代理地址 例: https://proxy.example.com/" class="iwara-form-input" style="flex: 1;">
               <button class="iwara-btn-small" id="add-proxy">➕ 添加</button>
             </div>
-            <div style="display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; align-items: center;">
+            <div style="display: flex; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; align-items: center;">
               <div style="display: flex; align-items: center; gap: 4px;">
-                <label style="color: #94a3b8; font-size: 13px; white-space: nowrap;">超时</label>
+                <label style="color: var(--iwara-muted); font-size: 13px; white-space: nowrap;">超时</label>
                 <input type="number" id="proxy-timeout" value="${tempProxyTimeout}" min="1" max="100000" step="100" class="iwara-form-input" style="width: 80px; padding: 4px 8px; font-size: 13px;">
-                <span style="color: #94a3b8; font-size: 13px;">ms</span>
+                <span style="color: var(--iwara-muted); font-size: 13px;">ms</span>
               </div>
+            </div>
+            <div style="display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; align-items: center;">
               <button class="iwara-btn-small" id="check-all-proxies">🔍 检测延迟</button>
-              <button class="iwara-btn-small" id="enable-all-proxies" style="background: rgba(34, 197, 94, 0.2); border-color: rgba(34, 197, 94, 0.4); color: #22c55e;">✓ 启用全部</button>
-              <button class="iwara-btn-small" id="disable-failed-proxies" style="background: rgba(255, 165, 0, 0.2); border-color: rgba(255, 165, 0, 0.4); color: #ffa500;">⚠️ 禁用超时</button>
-              <button class="iwara-btn-small" id="delete-failed-proxies" style="background: rgba(255, 59, 48, 0.2); border-color: rgba(255, 59, 48, 0.4); color: #ff3b30;">🗑️ 删除超时</button>
+              <button class="iwara-btn-small" id="enable-all-proxies" style="background: rgba(152, 195, 121, 0.18); border-color: rgba(152, 195, 121, 0.38); color: #98c379;">✓ 启用全部</button>
+              <button class="iwara-btn-small" id="disable-all-proxies" style="background: rgba(92, 99, 112, 0.18); border-color: rgba(92, 99, 112, 0.38); color: #abb2bf;">✕ 禁用全部</button>
+              <button class="iwara-btn-small" id="disable-failed-proxies" style="background: rgba(229, 192, 123, 0.16); border-color: rgba(229, 192, 123, 0.36); color: #e5c07b;">⚠️ 禁用超时</button>
+              <button class="iwara-btn-small" id="delete-failed-proxies" style="background: rgba(224, 108, 117, 0.18); border-color: rgba(224, 108, 117, 0.38); color: #e06c75;">🗑️ 删除超时</button>
             </div>
             <div id="proxy-list-container" class="iwara-proxy-list" style="max-height: 200px;"></div>
           </div>
@@ -489,10 +492,10 @@ export function createSettingsModal(deps) {
             <p style="color: #64748b; font-size: 12px; margin: 8px 0 0 0;">💡 每行一个代理地址，以 # 开头的代理将被禁用</p>
           </div>
 
-          <p style="color: #64748b; font-size: 12px; margin: 8px 0 0 0;">
-            <a href="https://github.com/1234567Yang/cf-proxy-ex" target="_blank" style="color: #818cf8; text-decoration: none;">⭐ 代理项目(需自行部署): cf-proxy-ex</a>
+          <p style="color: var(--iwara-subtle); font-size: 12px; margin: 8px 0 0 0;">
+            <a href="https://github.com/1234567Yang/cf-proxy-ex" target="_blank" style="color: var(--iwara-accent); text-decoration: none;">⭐ 代理项目(需自行部署): cf-proxy-ex</a>
           </p>
-          <p style="color: #64748b; font-size: 12px; margin: 8px 0 0 0;">⏩ 仅代理视频的播放链接</p>
+          <p style="color: var(--iwara-subtle); font-size: 12px; margin: 8px 0 0 0;">⏩ 获取视频链接与播放链接会使用同一代理</p>
         </div>
       `;
 
@@ -650,9 +653,10 @@ export function createSettingsModal(deps) {
         if (proxy) delete proxy.checkResult;
       });
 
-      const results = await Promise.all(tempProxyList.map((proxy) => checkSingleProxy(proxy.url, timeoutMs)));
+      const results = new Array(tempProxyList.length);
+      const BATCH_SIZE = 5;
 
-      results.forEach((result, index) => {
+      const applyResultToUI = (result, index) => {
         const item = container.querySelector(`[data-index="${index}"]`);
         if (!item) return;
 
@@ -676,7 +680,18 @@ export function createSettingsModal(deps) {
           statusSpan.className = 'iwara-proxy-status failed';
           statusSpan.textContent = result.error === 'timeout' ? '超时' : '失败';
         }
-      });
+      };
+
+      for (let start = 0; start < tempProxyList.length; start += BATCH_SIZE) {
+        const batch = tempProxyList.slice(start, start + BATCH_SIZE);
+        const batchResults = await Promise.all(batch.map((proxy) => checkSingleProxy(proxy.url, timeoutMs)));
+
+        batchResults.forEach((result, offset) => {
+          const index = start + offset;
+          results[index] = result;
+          applyResultToUI(result, index);
+        });
+      }
 
       checkBtn.disabled = false;
       checkBtn.textContent = originalText;
@@ -704,6 +719,26 @@ export function createSettingsModal(deps) {
       });
       renderProxyList();
       showNotification(`✅ 已启用全部代理 (${disabledCount} 个)`, 'success');
+    }
+
+    function disableAllProxies() {
+      if (tempProxyList.length === 0) {
+        showNotification('ℹ️ 没有可禁用的代理', 'info');
+        return;
+      }
+
+      const enabledCount = tempProxyList.filter((p) => p.enabled).length;
+
+      if (enabledCount === 0) {
+        showNotification('ℹ️ 所有代理都已禁用', 'info');
+        return;
+      }
+
+      tempProxyList.forEach((proxy) => {
+        proxy.enabled = false;
+      });
+      renderProxyList();
+      showNotification(`✅ 已禁用全部代理 (${enabledCount} 个)`, 'success');
     }
 
     function disableFailedProxies() {
@@ -916,6 +951,9 @@ export function createSettingsModal(deps) {
 
       const enableAllBtn = modal.querySelector('#enable-all-proxies');
       if (enableAllBtn) enableAllBtn.addEventListener('click', enableAllProxies);
+
+      const disableAllBtn = modal.querySelector('#disable-all-proxies');
+      if (disableAllBtn) disableAllBtn.addEventListener('click', disableAllProxies);
 
       const disableFailedBtn = modal.querySelector('#disable-failed-proxies');
       if (disableFailedBtn) disableFailedBtn.addEventListener('click', disableFailedProxies);
