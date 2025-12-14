@@ -8,7 +8,7 @@ export default defineConfig({
       userscript: {
         name: 'Iwara 外部播放器',
         namespace: 'none',
-        version: '1.5',
+        version: '1.6',
         description: '支持外部播放器和视频播放链接代理(需自建服务)',
         author: 'EvilSissi',
         match: ['*://*.iwara.tv/*'],
@@ -18,6 +18,7 @@ export default defineConfig({
           'GM_registerMenuCommand',
           'GM_getValue',
           'GM_setValue',
+          'GM_setClipboard',
           'GM_addStyle',
           'GM_xmlhttpRequest'
         ],

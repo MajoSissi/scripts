@@ -39,7 +39,7 @@ export function createButtonsFeature(deps) {
           });
           const { proxiedUrl, url } = await videoApi.getVideoLinkById(videoId, null, { proxyPrefix });
           const finalUrl = proxiedUrl || (proxyPrefix ? proxyPrefix + url : url);
-          await navigator.clipboard.writeText(finalUrl);
+          await videoApi.copyToClipboard(finalUrl);
           videoApi.notify?.('✅ 链接已复制到剪贴板', 'success', { proxyPrefix });
         } catch (error) {
           console.error('[Iwara Player] 复制失败:', error);
@@ -63,7 +63,11 @@ export function createButtonsFeature(deps) {
           });
           const { proxiedUrl, url } = await videoApi.getVideoLinkById(videoId, null, { proxyPrefix });
           const finalUrl = proxiedUrl || (proxyPrefix ? proxyPrefix + url : url);
-          window.open(finalUrl, '_blank');
+          const opened = window.open(finalUrl, '_blank', 'noopener,noreferrer');
+          if (!opened) {
+            videoApi.notify?.('❌ 打开失败: 浏览器拦截了新标签页/弹窗，请允许后重试', 'error', { proxyPrefix });
+            return;
+          }
           videoApi.notify?.('✅ 已在新标签页打开', 'success', { proxyPrefix });
         } catch (error) {
           console.error('[Iwara Player] 打开失败:', error);
@@ -111,7 +115,7 @@ export function createButtonsFeature(deps) {
           });
           const { proxiedUrl, url } = await videoApi.getVideoLinkById(videoId, null, { proxyPrefix });
           const finalUrl = proxiedUrl || (proxyPrefix ? proxyPrefix + url : url);
-          await navigator.clipboard.writeText(finalUrl);
+          await videoApi.copyToClipboard(finalUrl);
           videoApi.notify?.('✅ 链接已复制到剪贴板', 'success', { proxyPrefix });
         } catch (error) {
           console.error('[Iwara Player] 复制失败:', error);
@@ -132,7 +136,11 @@ export function createButtonsFeature(deps) {
           });
           const { proxiedUrl, url } = await videoApi.getVideoLinkById(videoId, null, { proxyPrefix });
           const finalUrl = proxiedUrl || (proxyPrefix ? proxyPrefix + url : url);
-          window.open(finalUrl, '_blank');
+          const opened = window.open(finalUrl, '_blank', 'noopener,noreferrer');
+          if (!opened) {
+            videoApi.notify?.('❌ 打开失败: 浏览器拦截了新标签页/弹窗，请允许后重试', 'error', { proxyPrefix });
+            return;
+          }
           videoApi.notify?.('✅ 已在新标签页打开', 'success', { proxyPrefix });
         } catch (error) {
           console.error('[Iwara Player] 打开失败:', error);

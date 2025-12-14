@@ -58,6 +58,40 @@ export function createVideoApi(deps) {
     return button;
   };
 
+  async function copyToClipboard(text) {
+    const value = String(text ?? '');
+    if (!value) throw new Error('复制内容为空');
+
+    try {
+      if (typeof GM_setClipboard === 'function') {
+        GM_setClipboard(value, { type: 'text', mimetype: 'text/plain' });
+        return true;
+      }
+    } catch {
+      // ignore and fall through
+    }
+
+    if (navigator?.clipboard?.writeText) {
+      await navigator.clipboard.writeText(value);
+      return true;
+    }
+
+    const textarea = document.createElement('textarea');
+    textarea.value = value;
+    textarea.setAttribute('readonly', '');
+    textarea.style.position = 'fixed';
+    textarea.style.top = '-1000px';
+    textarea.style.left = '-1000px';
+    document.body.appendChild(textarea);
+    textarea.focus({ preventScroll: true });
+    textarea.select();
+    const ok = typeof document.execCommand === 'function' ? document.execCommand('copy') : false;
+    textarea.remove();
+
+    if (!ok) throw new Error('复制失败');
+    return true;
+  }
+
   async function getVideoLinkById(videoId, quality = null, options = {}) {
     const proxyPrefix = typeof options?.proxyPrefix === 'string' ? options.proxyPrefix : getActionProxyPrefix();
 
@@ -223,6 +257,8 @@ export function createVideoApi(deps) {
 
   return {
     createButton,
+    copyToClipboard,
+    notify,
     pickProxyPrefix: getActionProxyPrefix,
     getVideoLinkById,
     getVideoUrl,
