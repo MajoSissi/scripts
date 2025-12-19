@@ -13,6 +13,10 @@ audio_codec="copy"
 # 其他参数
 ffmpeg_options="-y -hide_banner -err_detect ignore_err -threads 0"
 
+# 默认筛选阈值（主菜单快速入口用）
+# 支持格式: 100M, 1.5G, 500(字节)，也兼容 100MB/1.5GB
+DEFAULT_GT_SIZE="300M"
+
 # Excel 日志文件和路径配置
 csv_log_file=""
 target_path=""
@@ -238,11 +242,18 @@ format_size() {
 # 解析大小输入（支持G/g, M/m）
 parse_size() {
     local input="$1"
-    
-    if [[ "$input" =~ ^([0-9]+\.?[0-9]*)([GMgm]?)$ ]]; then
+    local normalized
+
+    # 兼容 300MB/1.5GB 这种输入
+    normalized="${input// /}"
+    if [[ "$normalized" =~ ^([0-9]+\.?[0-9]*)([GMgm])B$ ]]; then
+        normalized="${BASH_REMATCH[1]}${BASH_REMATCH[2]}"
+    fi
+
+    if [[ "$normalized" =~ ^([0-9]+\.?[0-9]*)([GMgm]?)$ ]]; then
         local number="${BASH_REMATCH[1]}"
         local unit="${BASH_REMATCH[2],,}"
-        
+
         case "$unit" in
             "g") echo "$(awk "BEGIN {printf \"%.0f\", $number * 1073741824}")" ;;
             "m") echo "$(awk "BEGIN {printf \"%.0f\", $number * 1048576}")" ;;
@@ -252,6 +263,17 @@ parse_size() {
     else
         echo "-1"
     fi
+}
+
+normalize_size_label() {
+    local label="$1"
+    label="${label// /}"
+    label="${label^^}"
+    # 兼容 300MB/1.5GB 这种后缀
+    if [[ "$label" =~ ^([0-9]+\.?[0-9]*)(M|G)B$ ]]; then
+        label="${BASH_REMATCH[1]}${BASH_REMATCH[2]}"
+    fi
+    echo "$label"
 }
 
 # 列出视频文件
@@ -359,6 +381,96 @@ get_scale_filter() {
     fi
     
     echo "$scale_filter"
+}
+
+# 根据大小和比较符生成目录名前缀
+generate_filter_dir_prefix() {
+    local size_bytes="$1"
+    local operator="$2"  # "GT" 或 "LT"
+    local label="${3:-}"
+
+    local size_display
+    if [[ -n "$label" ]]; then
+        size_display="$(normalize_size_label "$label")"
+    else
+        size_display="$(format_size "$size_bytes")"
+        size_display="${size_display// /}"
+    fi
+
+    if [[ "$operator" == "GT" ]]; then
+        echo "ffmpeg_GT_${size_display}"
+    elif [[ "$operator" == "LT" ]]; then
+        echo "ffmpeg_LT_${size_display}"
+    else
+        echo "ffmpeg_filter_${size_display}"
+    fi
+}
+
+# 批量移动文件到指定前缀的目录下（保留源目录结构）
+move_files_to_filter_dir() {
+    local dir_prefix="$1"
+    shift
+    local files=("$@")
+    
+    if [[ ${#files[@]} -eq 0 ]]; then
+        return 0
+    fi
+    
+    echo -e "${CYAN}▸ 将源文件移动到筛选目录...${NC}"
+    echo
+    
+    for file in "${files[@]}"; do
+        local file_dir=$(dirname "$file")
+        local file_base=$(basename "$file")
+        
+        # 确定目标根目录
+        local filter_root
+        if [[ "$is_single_file" == true ]]; then
+            # 单文件模式：在文件所在目录
+            filter_root="${file_dir}/${dir_prefix}"
+        elif [[ -n "$base_backup_dir" ]]; then
+            # 路径参数模式：在父目录
+            local original_parent=$(dirname "$target_path")
+            filter_root="${original_parent}/${dir_prefix}"
+        else
+            # 交互模式：在工作目录
+            filter_root="./${dir_prefix}"
+        fi
+        
+        # 计算源文件相对路径
+        local relative_path
+        if [[ "$is_single_file" == true ]]; then
+            relative_path="$file_base"
+        elif [[ -n "$target_path" ]]; then
+            relative_path="${file#$target_path/}"
+            if [[ "$relative_path" == "$file" ]]; then
+                relative_path="$file_base"
+            fi
+        else
+            relative_path="$file"
+            relative_path="${relative_path#./}"
+        fi
+        
+        # 构建目标路径（保留源目录结构）
+        local target_dir="${filter_root}"
+        local relative_dir=$(dirname "$relative_path")
+        
+        if [[ "$relative_dir" != "." ]]; then
+            target_dir="${filter_root}/${relative_dir}"
+        fi
+        
+        # 创建目录并移动文件
+        mkdir -p "$target_dir"
+        local target_file="${target_dir}/${file_base}"
+        
+        if mv "$file" "$target_file" 2>/dev/null; then
+            printf "  ${GREEN}✓${NC} %-60s ${CYAN}→ %s${NC}\n" "$file" "$target_file"
+        else
+            printf "  ${RED}✗${NC} 无法移动: %s\n" "$file"
+        fi
+    done
+    
+    echo
 }
 
 # 移动已处理的源文件到备份目录
@@ -671,6 +783,234 @@ process_by_indices() {
 }
 
 # 按大小过滤并处理文件
+process_by_min_size() {
+    local min_size="$1"
+    local size_label="${2:-}"
+
+    if [[ -z "$min_size" ]] || ! [[ "$min_size" =~ ^[0-9]+$ ]]; then
+        echo -e "${RED}✗ 无效的最小大小参数！${NC}"
+        return 1
+    fi
+
+    local files=() large_files=()
+    readarray -t files < <(get_video_files_recursive ".")
+
+    # 过滤掉空字符串
+    local valid_files=()
+    for file in "${files[@]}"; do
+        if [[ -n "$file" && -f "$file" ]]; then
+            valid_files+=("$file")
+        fi
+    done
+    files=("${valid_files[@]}")
+
+    echo -e "${GREEN}✓ 筛选条件: 大于 ${YELLOW}$(format_size "$min_size")${NC}"
+    echo
+    echo -e "${CYAN}▶ 符合条件的视频文件${NC}"
+    echo
+    for file in "${files[@]}"; do
+        local size=$(stat -c%s "$file" 2>/dev/null || echo "0")
+        if (( size > min_size )); then
+            large_files+=("$file")
+            printf "${YELLOW}%3d.${NC} %-50s ${CYAN}%s${NC}\n" "${#large_files[@]}" "$file" "$(format_size "$size")"
+        fi
+    done
+
+    if [[ ${#large_files[@]} -eq 0 ]]; then
+        echo -e "${RED}✗ 未找到大于指定大小的视频文件！${NC}"
+        return 1
+    fi
+
+    echo
+    echo -e "${CYAN}找到 ${YELLOW}${#large_files[@]}${CYAN} 个符合条件的文件${NC}"
+    echo
+    echo -e "${BLUE}请选择操作：${NC}"
+    echo -e "${CYAN}[1]${NC} 按序号选择处理"
+    echo -e "${CYAN}[2]${NC} 处理所有文件"
+    echo
+    echo -ne "${BLUE}选择 [1-2]: ${NC}"
+    sub_choice=$(read_with_default)
+
+    echo
+
+    case "$sub_choice" in
+        1)
+            echo -e "${BLUE}请输入要处理的文件序号（用逗号或空格分隔多个序号）:${NC}"
+            user_input=$(read_with_default "")
+
+            [[ -z "$user_input" ]] && { echo -e "${RED}未输入任何序号！${NC}"; return 1; }
+
+            local selected_indices=()
+            readarray -t selected_indices < <(parse_indices "$user_input" "${#large_files[@]}") || return 1
+
+            local selected_files=()
+            for index in "${selected_indices[@]}"; do
+                selected_files+=("${large_files[$((index-1))]}")
+            done
+
+            echo -e "${GREEN}✓ 已选择 ${YELLOW}${#selected_files[@]}${GREEN} 个文件${NC}"
+            echo
+
+            # 添加处理选项
+            echo -e "${BLUE}请选择操作：${NC}"
+            echo -e "  ${CYAN}[1]${NC} 开始处理视频"
+            echo -e "  ${CYAN}[2]${NC} 输出待处理视频信息（xls文件）"
+            echo
+            echo -ne "${BLUE}选择 [1-2]: ${NC}"
+            action_choice=$(read_with_default)
+
+            echo
+
+            case "$action_choice" in
+                1)
+                    echo -e "${CYAN}▸ 开始处理视频${NC}"
+                    echo
+
+                    select_template
+                    echo
+
+                    # 创建CSV日志文件
+                    create_csv_log
+                    echo
+
+                    local file_count=1
+                    for file in "${selected_files[@]}"; do
+                        process_video "$file" "$file_count" "${#selected_files[@]}"
+                        ((file_count++))
+                    done
+                    ;;
+                2)
+                    echo -e "${CYAN}▸ 正在生成待处理视频信息...${NC}"
+                    echo
+
+                    local timestamp=$(date +"%Y%m%d_%H-%M")
+                    local info_file="待处理视频_${timestamp}.xls"
+
+                    # 创建信息文件并写入表头
+                    echo -e "文件大小(M)\t分辨率\t文件名\t目录" > "$info_file"
+
+                    # 遍历选中的文件，输出信息
+                    for file in "${selected_files[@]}"; do
+                        local file_dir=$(dirname "$file")
+                        local file_base=$(basename "$file")
+                        local file_size=$(stat -c%s "$file" 2>/dev/null || echo "0")
+                        local file_size_mb=$(awk "BEGIN {printf \"%.2f\", $file_size / 1048576}")
+                        local resolution=$(get_video_resolution "$file")
+                        if [[ -z "$resolution" ]]; then
+                            resolution="未知"
+                        fi
+
+                        # 写入信息
+                        echo -e "${file_size_mb}\t${resolution}\t${file_base}\t${file_dir}" >> "$info_file"
+                    done
+
+                    echo -e "${GREEN}✓ 已生成待处理视频信息文件: ${CYAN}$info_file${NC}"
+                    echo -e "${YELLOW}  包含 ${#selected_files[@]} 个视频的信息${NC}"
+                    echo
+                    
+                    # 移动源文件到筛选目录
+                    local dir_prefix=$(generate_filter_dir_prefix "$min_size" "GT" "$size_label")
+                    move_files_to_filter_dir "$dir_prefix" "${selected_files[@]}"
+                    ;;
+                *)
+                    echo -e "${RED}✗ 无效选择！${NC}"
+                    return 1
+                    ;;
+            esac
+            ;;
+        2)
+            echo -e "${GREEN}✓ 将处理所有 ${YELLOW}${#large_files[@]}${GREEN} 个大文件${NC}"
+            echo
+
+            # 添加处理选项
+            echo -e "${BLUE}请选择操作：${NC}"
+            echo -e "  ${CYAN}[1]${NC} 开始处理视频"
+            echo -e "  ${CYAN}[2]${NC} 输出待处理视频信息（xls文件）"
+            echo
+            echo -ne "${BLUE}选择 [1-2]: ${NC}"
+            action_choice=$(read_with_default)
+
+            echo
+
+            case "$action_choice" in
+                1)
+                    echo -e "${CYAN}▸ 开始处理视频${NC}"
+                    echo
+
+                    select_template
+                    echo
+
+                    # 创建CSV日志文件
+                    create_csv_log
+                    echo
+
+                    local file_count=1
+                    for file in "${large_files[@]}"; do
+                        process_video "$file" "$file_count" "${#large_files[@]}"
+                        ((file_count++))
+                    done
+                    ;;
+        2)
+            echo -e "${CYAN}▸ 正在生成待处理视频信息...${NC}"
+            echo
+
+            local timestamp=$(date +"%Y%m%d_%H-%M")
+            local info_file="待处理视频_${timestamp}.xls"
+
+            # 创建信息文件并写入表头
+            echo -e "文件大小(M)\t分辨率\t文件名\t目录" > "$info_file"
+
+            # 遍历所有文件，输出信息
+            for file in "${large_files[@]}"; do
+                local file_dir=$(dirname "$file")
+                local file_base=$(basename "$file")
+                local file_size=$(stat -c%s "$file" 2>/dev/null || echo "0")
+                local file_size_mb=$(awk "BEGIN {printf \"%.2f\", $file_size / 1048576}")
+                local resolution=$(get_video_resolution "$file")
+                if [[ -z "$resolution" ]]; then
+                    resolution="未知"
+                fi
+
+                # 写入信息
+                echo -e "${file_size_mb}\t${resolution}\t${file_base}\t${file_dir}" >> "$info_file"
+            done
+
+            echo -e "${GREEN}✓ 已生成待处理视频信息文件: ${CYAN}$info_file${NC}"
+            echo -e "${YELLOW}  包含 ${#large_files[@]} 个视频的信息${NC}"
+            echo
+            
+            # 移动源文件到筛选目录
+            local dir_prefix=$(generate_filter_dir_prefix "$min_size" "GT" "$size_label")
+            move_files_to_filter_dir "$dir_prefix" "${large_files[@]}"
+            ;;
+                *)
+                    echo -e "${RED}✗ 无效选择！${NC}"
+                    return 1
+                    ;;
+            esac
+            ;;
+        *)
+            echo -e "${RED}✗ 无效选择！${NC}"
+            return 1
+            ;;
+    esac
+}
+
+# 预设筛选：大于 300MB
+process_over_300mb() {
+    local size_label="${DEFAULT_GT_SIZE}"
+    local min_size
+    min_size=$(parse_size "$size_label")
+    if (( min_size == -1 )); then
+        echo -e "${RED}✗ 默认大小配置无效: ${YELLOW}$size_label${NC}"
+        return 1
+    fi
+
+    echo -e "${GREEN}✓ 预设筛选条件: 大于 ${YELLOW}$size_label${NC}"
+    echo
+    process_by_min_size "$min_size" "$size_label"
+}
+
 process_by_size() {
     echo -e "${BLUE}请输入最小文件大小${NC}"
     echo -e "${YELLOW}提示: 支持格式 100M, 1.5G, 500 (字节)${NC}"
@@ -691,199 +1031,8 @@ process_by_size() {
         echo -e "${YELLOW}提示: 请使用如 100M, 1.5G 等格式${NC}"
         return 1
     fi
-    
-    local files=() large_files=()
-    readarray -t files < <(get_video_files_recursive ".")
-    
-    # 过滤掉空字符串
-    local valid_files=()
-    for file in "${files[@]}"; do
-        if [[ -n "$file" && -f "$file" ]]; then
-            valid_files+=("$file")
-        fi
-    done
-    files=("${valid_files[@]}")
-    
-    echo -e "${GREEN}✓ 筛选条件: 大于 ${YELLOW}$(format_size "$min_size")${NC}"
-    echo
-    echo -e "${CYAN}▶ 符合条件的视频文件${NC}"
-    echo
-    for file in "${files[@]}"; do
-        local size=$(stat -c%s "$file" 2>/dev/null || echo "0")
-        if (( size > min_size )); then
-            large_files+=("$file")
-            printf "${YELLOW}%3d.${NC} %-50s ${CYAN}%s${NC}\n" "${#large_files[@]}" "$file" "$(format_size "$size")"
-        fi
-    done
-    
-    if [[ ${#large_files[@]} -eq 0 ]]; then
-        echo -e "${RED}✗ 未找到大于指定大小的视频文件！${NC}"
-        return 1
-    fi
-    
-    echo
-    echo -e "${CYAN}找到 ${YELLOW}${#large_files[@]}${CYAN} 个符合条件的文件${NC}"
-    echo
-    echo -e "${BLUE}请选择操作：${NC}"
-    echo -e "${CYAN}[1]${NC} 按序号选择处理"
-    echo -e "${CYAN}[2]${NC} 处理所有文件"
-    echo
-    echo -ne "${BLUE}选择 [1-2]: ${NC}"
-    sub_choice=$(read_with_default)
-    
-    echo
-    
-    case "$sub_choice" in
-        1)
-            echo -e "${BLUE}请输入要处理的文件序号（用逗号或空格分隔多个序号）:${NC}"
-            user_input=$(read_with_default "")
-            
-            [[ -z "$user_input" ]] && { echo -e "${RED}未输入任何序号！${NC}"; return 1; }
-            
-            local selected_indices=()
-            readarray -t selected_indices < <(parse_indices "$user_input" "${#large_files[@]}") || return 1
-            
-            local selected_files=()
-            for index in "${selected_indices[@]}"; do
-                selected_files+=("${large_files[$((index-1))]}")
-            done
-            
-            echo -e "${GREEN}✓ 已选择 ${YELLOW}${#selected_files[@]}${GREEN} 个文件${NC}"
-            echo
-            
-            # 添加处理选项
-            echo -e "${BLUE}请选择操作：${NC}"
-            echo -e "  ${CYAN}[1]${NC} 开始处理视频"
-            echo -e "  ${CYAN}[2]${NC} 输出待处理视频信息（xls文件）"
-            echo
-            echo -ne "${BLUE}选择 [1-2]: ${NC}"
-            action_choice=$(read_with_default)
-            
-            echo
-            
-            case "$action_choice" in
-                1)
-                    echo -e "${CYAN}▸ 开始处理视频${NC}"
-                    echo
-                    
-                    select_template
-                    echo
-                    
-                    # 创建CSV日志文件
-                    create_csv_log
-                    echo
-                    
-                    local file_count=1
-                    for file in "${selected_files[@]}"; do
-                        process_video "$file" "$file_count" "${#selected_files[@]}"
-                        ((file_count++))
-                    done
-                    ;;
-                2)
-                    echo -e "${CYAN}▸ 正在生成待处理视频信息...${NC}"
-                    echo
-                    
-                    local timestamp=$(date +"%Y%m%d_%H-%M")
-                    local info_file="待处理视频_${timestamp}.xls"
-                    
-                    # 创建信息文件并写入表头
-                    echo -e "文件大小(M)\t分辨率\t文件名\t目录" > "$info_file"
-                    
-                    # 遍历选中的文件，输出信息
-                    for file in "${selected_files[@]}"; do
-                        local file_dir=$(dirname "$file")
-                        local file_base=$(basename "$file")
-                        local file_size=$(stat -c%s "$file" 2>/dev/null || echo "0")
-                        local file_size_mb=$(awk "BEGIN {printf \"%.2f\", $file_size / 1048576}")
-                        local resolution=$(get_video_resolution "$file")
-                        if [[ -z "$resolution" ]]; then
-                            resolution="未知"
-                        fi
-                        
-                        # 写入信息
-                        echo -e "${file_size_mb}\t${resolution}\t${file_base}\t${file_dir}" >> "$info_file"
-                    done
-                    
-                    echo -e "${GREEN}✓ 已生成待处理视频信息文件: ${CYAN}$info_file${NC}"
-                    echo -e "${YELLOW}  包含 ${#selected_files[@]} 个视频的信息${NC}"
-                    ;;
-                *)
-                    echo -e "${RED}✗ 无效选择！${NC}"
-                    return 1
-                    ;;
-            esac
-            ;;
-        2)
-            echo -e "${GREEN}✓ 将处理所有 ${YELLOW}${#large_files[@]}${GREEN} 个大文件${NC}"
-            echo
-            
-            # 添加处理选项
-            echo -e "${BLUE}请选择操作：${NC}"
-            echo -e "  ${CYAN}[1]${NC} 开始处理视频"
-            echo -e "  ${CYAN}[2]${NC} 输出待处理视频信息（xls文件）"
-            echo
-            echo -ne "${BLUE}选择 [1-2]: ${NC}"
-            action_choice=$(read_with_default)
-            
-            echo
-            
-            case "$action_choice" in
-                1)
-                    echo -e "${CYAN}▸ 开始处理视频${NC}"
-                    echo
-                    
-                    select_template
-                    echo
-                    
-                    # 创建CSV日志文件
-                    create_csv_log
-                    echo
-                    
-                    local file_count=1
-                    for file in "${large_files[@]}"; do
-                        process_video "$file" "$file_count" "${#large_files[@]}"
-                        ((file_count++))
-                    done
-                    ;;
-                2)
-                    echo -e "${CYAN}▸ 正在生成待处理视频信息...${NC}"
-                    echo
-                    
-                    local timestamp=$(date +"%Y%m%d_%H-%M")
-                    local info_file="待处理视频_${timestamp}.xls"
-                    
-                    # 创建信息文件并写入表头
-                    echo -e "文件大小(M)\t分辨率\t文件名\t目录" > "$info_file"
-                    
-                    # 遍历所有文件，输出信息
-                    for file in "${large_files[@]}"; do
-                        local file_dir=$(dirname "$file")
-                        local file_base=$(basename "$file")
-                        local file_size=$(stat -c%s "$file" 2>/dev/null || echo "0")
-                        local file_size_mb=$(awk "BEGIN {printf \"%.2f\", $file_size / 1048576}")
-                        local resolution=$(get_video_resolution "$file")
-                        if [[ -z "$resolution" ]]; then
-                            resolution="未知"
-                        fi
-                        
-                        # 写入信息
-                        echo -e "${file_size_mb}\t${resolution}\t${file_base}\t${file_dir}" >> "$info_file"
-                    done
-                    
-                    echo -e "${GREEN}✓ 已生成待处理视频信息文件: ${CYAN}$info_file${NC}"
-                    echo -e "${YELLOW}  包含 ${#large_files[@]} 个视频的信息${NC}"
-                    ;;
-                *)
-                    echo -e "${RED}✗ 无效选择！${NC}"
-                    return 1
-                    ;;
-            esac
-            ;;
-        *)
-            echo -e "${RED}✗ 无效选择！${NC}"
-            return 1
-            ;;
-    esac
+
+    process_by_min_size "$min_size" "$size_input"
 }
 
 # 按大小过滤并处理文件（小于指定大小）
@@ -901,6 +1050,7 @@ process_by_small_size() {
         return 1
     fi
     
+    local size_label="$size_input"
     local max_size=$(parse_size "$size_input")
     if (( max_size == -1 )); then
         echo -e "${RED}✗ 无效的文件大小格式！${NC}"
@@ -1022,6 +1172,11 @@ process_by_small_size() {
                     
                     echo -e "${GREEN}✓ 已生成待处理视频信息文件: ${CYAN}$info_file${NC}"
                     echo -e "${YELLOW}  包含 ${#selected_files[@]} 个视频的信息${NC}"
+                    echo
+                    
+                    # 移动源文件到筛选目录
+                    local dir_prefix=$(generate_filter_dir_prefix "$max_size" "LT" "$size_label")
+                    move_files_to_filter_dir "$dir_prefix" "${selected_files[@]}"
                     ;;
                 *)
                     echo -e "${RED}✗ 无效选择！${NC}"
@@ -1088,6 +1243,11 @@ process_by_small_size() {
                     
                     echo -e "${GREEN}✓ 已生成待处理视频信息文件: ${CYAN}$info_file${NC}"
                     echo -e "${YELLOW}  包含 ${#small_files[@]} 个视频的信息${NC}"
+                    echo
+                    
+                    # 移动源文件到筛选目录
+                    local dir_prefix=$(generate_filter_dir_prefix "$max_size" "LT" "$size_label")
+                    move_files_to_filter_dir "$dir_prefix" "${small_files[@]}"
                     ;;
                 *)
                     echo -e "${RED}✗ 无效选择！${NC}"
@@ -1194,14 +1354,15 @@ show_menu() {
     echo
     echo -e "${BLUE}▶ FFmpeg 视频转换工具 - 主菜单${NC}"
     echo
-    echo -e "  ${CYAN}[1]${NC} 处理所有视频文件"
-    echo -e "  ${CYAN}[2]${NC} 按大小筛选（大于）"
-    echo -e "  ${CYAN}[3]${NC} 按大小筛选（小于）"
-    echo -e "  ${CYAN}[4]${NC} 手动序号筛选"
+    echo -e "  ${CYAN}[1]${NC} 筛选（>${DEFAULT_GT_SIZE}）的文件"
+    echo -e "  ${CYAN}[2]${NC} 处理所有视频文件"
+    echo -e "  ${CYAN}[3]${NC} 按大小筛选（大于）"
+    echo -e "  ${CYAN}[4]${NC} 按大小筛选（小于）"
+    echo -e "  ${CYAN}[5]${NC} 手动序号筛选"
     echo
     echo -e "  ${YELLOW}[0]${NC} 退出程序"
     echo
-    echo -ne "${BLUE}请选择功能 [0-4]: ${NC}"
+    echo -ne "${BLUE}请选择功能 [0-5]: ${NC}"
 }
 
 # 处理指定路径（目录或文件）
@@ -1400,21 +1561,26 @@ main() {
                 
                 case "$choice" in
                     1) 
-                        echo -e "${CYAN}▸ 处理全部文件${NC}"
+                        echo -e "${CYAN}▸ 筛选（>${DEFAULT_GT_SIZE}）的文件${NC}"
                         echo
-                        process_all_files 
+                        process_over_300mb
                         ;;
                     2) 
+                        echo -e "${CYAN}▸ 处理全部文件${NC}"
+                        echo
+                        process_all_files
+                        ;;
+                    3) 
                         echo -e "${CYAN}▸ 按大小筛选（大于）${NC}"
                         echo
                         process_by_size 
                         ;;
-                    3) 
+                    4) 
                         echo -e "${CYAN}▸ 按大小筛选（小于）${NC}"
                         echo
                         process_by_small_size 
                         ;;
-                    4) 
+                    5) 
                         echo -e "${CYAN}▸ 手动序号筛选${NC}"
                         echo
                         process_by_indices 
@@ -1423,7 +1589,7 @@ main() {
                         exit 0
                         ;;
                     *) 
-                        echo -e "${RED}✗ 无效选择，请输入 0-4${NC}"
+                        echo -e "${RED}✗ 无效选择，请输入 0-5${NC}"
                         sleep 1
                         continue
                         ;;
