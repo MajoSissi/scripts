@@ -4,12 +4,13 @@
 video_extensions=("mp4" "avi" "mkv" "mov" "wmv" "flv" "webm" "m4v" "3gp" "mpg" "mpeg" "ts" "mts" "m2ts")
 
 # FFmpeg 参数配置()
-output="ffmpeg"
 crf="21"
 preset="medium"
 video_codec="libx265"
 max_resolution="" # 最大分辨率限制，例如 2560
 audio_codec="copy"
+# 默认输出目录：若未选择模板，仍按当前参数生成带后缀的输出目录
+output="ffmpeg_${video_codec}-${crf}-${preset}"
 # 其他参数
 ffmpeg_options="-y -hide_banner -err_detect ignore_err -threads 0"
 
@@ -22,6 +23,12 @@ csv_log_file=""
 target_path=""
 is_single_file=false
 base_backup_dir=""
+
+# 延迟移动：筛选阶段只记录“要跳过并移动”的文件；在确认开始处理后再移动
+pending_skip_dir_prefix=""
+pending_skip_operator=""
+pending_skip_label=""
+declare -a pending_skip_files=()
 
 # FFmpeg 模板配置
 declare -A ffmpeg_templates
@@ -276,6 +283,19 @@ normalize_size_label() {
     echo "$label"
 }
 
+normalize_path_key() {
+    local p="$1"
+    p="${p#./}"
+    echo "$p"
+}
+
+clear_pending_skips() {
+    pending_skip_dir_prefix=""
+    pending_skip_operator=""
+    pending_skip_label=""
+    pending_skip_files=()
+}
+
 # 列出视频文件
 list_video_files() {
     local files=()
@@ -404,6 +424,175 @@ generate_filter_dir_prefix() {
     else
         echo "ffmpeg_filter_${size_display}"
     fi
+}
+
+# 预计算“被跳过”的文件（延迟移动，直到确认开始处理）
+prepare_skip_gt() {
+    local threshold_bytes="$1"
+    local size_label="$2"
+
+    if [[ -z "$threshold_bytes" ]] || ! [[ "$threshold_bytes" =~ ^[0-9]+$ ]]; then
+        echo -e "${RED}✗ 无效的阈值参数！${NC}"
+        return 1
+    fi
+
+    clear_pending_skips
+    size_label="$(normalize_size_label "$size_label")"
+
+    local files=() to_skip=()
+    readarray -t files < <(get_video_files_recursive ".")
+
+    for file in "${files[@]}"; do
+        [[ -n "$file" && -f "$file" ]] || continue
+        local size
+        size=$(stat -c%s "$file" 2>/dev/null || echo "0")
+        # GT 语义：选择 > 阈值（后续处理）；跳过并移动 <= 阈值
+        if (( size <= threshold_bytes )); then
+            to_skip+=("$file")
+        fi
+    done
+
+    if [[ ${#to_skip[@]} -eq 0 ]]; then
+        echo -e "${GREEN}✓ 未找到需要跳过的文件（<=${YELLOW}${size_label}${GREEN}）${NC}"
+        return 0
+    fi
+
+    pending_skip_dir_prefix="$(generate_filter_dir_prefix "$threshold_bytes" "GT" "$size_label")"
+    pending_skip_operator="GT"
+    pending_skip_label="$size_label"
+    pending_skip_files=("${to_skip[@]}")
+
+    echo -e "${GREEN}✓ 已标记跳过 ${YELLOW}${#pending_skip_files[@]}${GREEN} 个文件（<=${YELLOW}${size_label}${GREEN}）${NC}"
+    echo -e "${CYAN}  将在确认开始处理后移动到: ${YELLOW}${pending_skip_dir_prefix}${NC}"
+}
+
+prepare_skip_lt() {
+    local threshold_bytes="$1"
+    local size_label="$2"
+
+    if [[ -z "$threshold_bytes" ]] || ! [[ "$threshold_bytes" =~ ^[0-9]+$ ]]; then
+        echo -e "${RED}✗ 无效的阈值参数！${NC}"
+        return 1
+    fi
+
+    clear_pending_skips
+    size_label="$(normalize_size_label "$size_label")"
+
+    local files=() to_skip=()
+    readarray -t files < <(get_video_files_recursive ".")
+
+    for file in "${files[@]}"; do
+        [[ -n "$file" && -f "$file" ]] || continue
+        local size
+        size=$(stat -c%s "$file" 2>/dev/null || echo "0")
+        # LT 语义：选择 < 阈值（后续处理）；跳过并移动 >= 阈值
+        if (( size >= threshold_bytes )); then
+            to_skip+=("$file")
+        fi
+    done
+
+    if [[ ${#to_skip[@]} -eq 0 ]]; then
+        echo -e "${GREEN}✓ 未找到需要跳过的文件（>=${YELLOW}${size_label}${GREEN}）${NC}"
+        return 0
+    fi
+
+    pending_skip_dir_prefix="$(generate_filter_dir_prefix "$threshold_bytes" "LT" "$size_label")"
+    pending_skip_operator="LT"
+    pending_skip_label="$size_label"
+    pending_skip_files=("${to_skip[@]}")
+
+    echo -e "${GREEN}✓ 已标记跳过 ${YELLOW}${#pending_skip_files[@]}${GREEN} 个文件（>=${YELLOW}${size_label}${GREEN}）${NC}"
+    echo -e "${CYAN}  将在确认开始处理后移动到: ${YELLOW}${pending_skip_dir_prefix}${NC}"
+}
+
+commit_pending_skips() {
+    if [[ ${#pending_skip_files[@]} -eq 0 ]]; then
+        return 0
+    fi
+    if [[ -z "$pending_skip_dir_prefix" ]]; then
+        echo -e "${RED}✗ 内部错误: pending_skip_dir_prefix 为空，无法移动跳过文件${NC}"
+        clear_pending_skips
+        return 1
+    fi
+
+    echo -e "${CYAN}▸ 正在移动被跳过的源文件（${YELLOW}${#pending_skip_files[@]}${CYAN} 个）...${NC}"
+    echo
+    move_files_to_filter_dir "$pending_skip_dir_prefix" "${pending_skip_files[@]}"
+    clear_pending_skips
+}
+
+# 将“被跳过”的文件移动到 ffmpeg_GT_xxx 目录（保留源目录结构）
+skip_and_move_gt() {
+    local threshold_bytes="$1"
+    local size_label="$2"
+
+    if [[ -z "$threshold_bytes" ]] || ! [[ "$threshold_bytes" =~ ^[0-9]+$ ]]; then
+        echo -e "${RED}✗ 无效的阈值参数！${NC}"
+        return 1
+    fi
+
+    size_label="$(normalize_size_label "$size_label")"
+
+    local files=() to_move=()
+    readarray -t files < <(get_video_files_recursive ".")
+
+    for file in "${files[@]}"; do
+        [[ -n "$file" && -f "$file" ]] || continue
+        local size
+        size=$(stat -c%s "$file" 2>/dev/null || echo "0")
+        # GT 语义：选择 > 阈值（后续处理）；跳过并移动 <= 阈值
+        if (( size <= threshold_bytes )); then
+            to_move+=("$file")
+        fi
+    done
+
+    if [[ ${#to_move[@]} -eq 0 ]]; then
+        echo -e "${GREEN}✓ 未找到需要跳过并移动的文件（<=${YELLOW}${size_label}${GREEN}）${NC}"
+        return 0
+    fi
+
+    local dir_prefix
+    dir_prefix=$(generate_filter_dir_prefix "$threshold_bytes" "GT" "$size_label")
+    echo -e "${GREEN}✓ 跳过并移动 ${YELLOW}${#to_move[@]}${GREEN} 个文件（<=${YELLOW}${size_label}${GREEN}）→ ${CYAN}${dir_prefix}${NC}"
+    echo
+    move_files_to_filter_dir "$dir_prefix" "${to_move[@]}"
+}
+
+# 将“被跳过”的文件移动到 ffmpeg_LT_xxx 目录（保留源目录结构）
+skip_and_move_lt() {
+    local threshold_bytes="$1"
+    local size_label="$2"
+
+    if [[ -z "$threshold_bytes" ]] || ! [[ "$threshold_bytes" =~ ^[0-9]+$ ]]; then
+        echo -e "${RED}✗ 无效的阈值参数！${NC}"
+        return 1
+    fi
+
+    size_label="$(normalize_size_label "$size_label")"
+
+    local files=() to_move=()
+    readarray -t files < <(get_video_files_recursive ".")
+
+    for file in "${files[@]}"; do
+        [[ -n "$file" && -f "$file" ]] || continue
+        local size
+        size=$(stat -c%s "$file" 2>/dev/null || echo "0")
+        # LT 语义：选择 < 阈值（后续处理）；跳过并移动 >= 阈值
+        if (( size >= threshold_bytes )); then
+            to_move+=("$file")
+        fi
+    done
+
+    if [[ ${#to_move[@]} -eq 0 ]]; then
+        echo -e "${GREEN}✓ 未找到需要跳过并移动的文件（>=${YELLOW}${size_label}${GREEN}）${NC}"
+        return 0
+    fi
+
+    local dir_prefix
+    dir_prefix=$(generate_filter_dir_prefix "$threshold_bytes" "LT" "$size_label")
+    echo -e "${GREEN}✓ 跳过并移动 ${YELLOW}${#to_move[@]}${GREEN} 个文件（>=${YELLOW}${size_label}${GREEN}）→ ${CYAN}${dir_prefix}${NC}"
+    echo
+    move_files_to_filter_dir "$dir_prefix" "${to_move[@]}"
 }
 
 # 批量移动文件到指定前缀的目录下（保留源目录结构）
@@ -999,20 +1188,24 @@ process_by_min_size() {
 # 预设筛选：大于 300MB
 process_over_300mb() {
     local size_label="${DEFAULT_GT_SIZE}"
-    local min_size
-    min_size=$(parse_size "$size_label")
-    if (( min_size == -1 )); then
+    local threshold_bytes
+    threshold_bytes=$(parse_size "$size_label")
+    if (( threshold_bytes == -1 )); then
         echo -e "${RED}✗ 默认大小配置无效: ${YELLOW}$size_label${NC}"
         return 1
     fi
 
-    echo -e "${GREEN}✓ 预设筛选条件: 大于 ${YELLOW}$size_label${NC}"
+    echo -e "${CYAN}▸ 筛选：处理 >${YELLOW}$size_label${CYAN} 的文件（跳过 <=${YELLOW}$size_label${CYAN} 的源文件，确认开始处理后再移动）${NC}"
     echo
-    process_by_min_size "$min_size" "$size_label"
+    prepare_skip_gt "$threshold_bytes" "$size_label"
+    echo
+    echo -e "${CYAN}▸ 后续正常处理剩余文件${NC}"
+    echo
+    process_all_files
 }
 
 process_by_size() {
-    echo -e "${BLUE}请输入最小文件大小${NC}"
+    echo -e "${BLUE}请输入阈值大小（将处理大于该大小的文件；跳过 <= 阈值的源文件并在确认开始处理后移动）${NC}"
     echo -e "${YELLOW}提示: 支持格式 100M, 1.5G, 500 (字节)${NC}"
     echo
     echo -ne "${BLUE}最小大小: ${NC}"
@@ -1032,234 +1225,41 @@ process_by_size() {
         return 1
     fi
 
-    process_by_min_size "$min_size" "$size_input"
+    prepare_skip_gt "$min_size" "$size_input"
+    echo
+    echo -e "${CYAN}▸ 后续正常处理剩余文件${NC}"
+    echo
+    process_all_files
 }
 
 # 按大小过滤并处理文件（小于指定大小）
 process_by_small_size() {
-    echo -e "${BLUE}请输入最大文件大小${NC}"
+    echo -e "${BLUE}请输入阈值大小（将处理小于该大小的文件；跳过 >= 阈值的源文件并在确认开始处理后移动）${NC}"
     echo -e "${YELLOW}提示: 支持格式 100M, 1.5G, 500 (字节)${NC}"
     echo
     echo -ne "${BLUE}最大大小: ${NC}"
     size_input=$(read_with_default "")
-    
+
     echo
-    
+
     if [[ -z "$size_input" ]]; then
         echo -e "${RED}✗ 未输入文件大小！${NC}"
         return 1
     fi
-    
-    local size_label="$size_input"
-    local max_size=$(parse_size "$size_input")
+
+    local max_size
+    max_size=$(parse_size "$size_input")
     if (( max_size == -1 )); then
         echo -e "${RED}✗ 无效的文件大小格式！${NC}"
         echo -e "${YELLOW}提示: 请使用如 100M, 1.5G 等格式${NC}"
         return 1
     fi
-    
-    local files=() small_files=()
-    readarray -t files < <(get_video_files_recursive ".")
-    
-    # 过滤掉空字符串
-    local valid_files=()
-    for file in "${files[@]}"; do
-        if [[ -n "$file" && -f "$file" ]]; then
-            valid_files+=("$file")
-        fi
-    done
-    files=("${valid_files[@]}")
-    
-    echo -e "${GREEN}✓ 筛选条件: 小于 ${YELLOW}$(format_size "$max_size")${NC}"
+
+    prepare_skip_lt "$max_size" "$size_input"
     echo
-    echo -e "${CYAN}▶ 符合条件的视频文件${NC}"
+    echo -e "${CYAN}▸ 后续正常处理剩余文件${NC}"
     echo
-    for file in "${files[@]}"; do
-        local size=$(stat -c%s "$file" 2>/dev/null || echo "0")
-        if (( size < max_size )); then
-            small_files+=("$file")
-            printf "${YELLOW}%3d.${NC} %-50s ${CYAN}%s${NC}\n" "${#small_files[@]}" "$file" "$(format_size "$size")"
-        fi
-    done
-    
-    if [[ ${#small_files[@]} -eq 0 ]]; then
-        echo -e "${RED}✗ 未找到小于指定大小的视频文件！${NC}"
-        return 1
-    fi
-    
-    echo
-    echo -e "${CYAN}找到 ${YELLOW}${#small_files[@]}${CYAN} 个符合条件的文件${NC}"
-    echo
-    echo -e "${BLUE}请选择操作：${NC}"
-    echo -e "${CYAN}[1]${NC} 按序号选择处理"
-    echo -e "${CYAN}[2]${NC} 处理所有文件"
-    echo
-    echo -ne "${BLUE}选择 [1-2]: ${NC}"
-    sub_choice=$(read_with_default)
-    
-    echo
-    
-    case "$sub_choice" in
-        1)
-            echo -e "${BLUE}请输入要处理的文件序号（用逗号或空格分隔多个序号）:${NC}"
-            user_input=$(read_with_default "")
-            
-            [[ -z "$user_input" ]] && { echo -e "${RED}未输入任何序号！${NC}"; return 1; }
-            
-            local selected_indices=()
-            readarray -t selected_indices < <(parse_indices "$user_input" "${#small_files[@]}") || return 1
-            
-            local selected_files=()
-            for index in "${selected_indices[@]}"; do
-                selected_files+=("${small_files[$((index-1))]}")
-            done
-            
-            echo -e "${GREEN}✓ 已选择 ${YELLOW}${#selected_files[@]}${GREEN} 个文件${NC}"
-            echo
-            
-            # 添加处理选项
-            echo -e "${BLUE}请选择操作：${NC}"
-            echo -e "  ${CYAN}[1]${NC} 开始处理视频"
-            echo -e "  ${CYAN}[2]${NC} 输出待处理视频信息（xls文件）"
-            echo
-            echo -ne "${BLUE}选择 [1-2]: ${NC}"
-            action_choice=$(read_with_default)
-            
-            echo
-            
-            case "$action_choice" in
-                1)
-                    echo -e "${CYAN}▸ 开始处理视频${NC}"
-                    echo
-                    
-                    select_template
-                    echo
-                    
-                    # 创建CSV日志文件
-                    create_csv_log
-                    echo
-                    
-                    local file_count=1
-                    for file in "${selected_files[@]}"; do
-                        process_video "$file" "$file_count" "${#selected_files[@]}"
-                        ((file_count++))
-                    done
-                    ;;
-                2)
-                    echo -e "${CYAN}▸ 正在生成待处理视频信息...${NC}"
-                    echo
-                    
-                    local timestamp=$(date +"%Y%m%d_%H-%M")
-                    local info_file="待处理视频_${timestamp}.xls"
-                    
-                    # 创建信息文件并写入表头
-                    echo -e "文件大小(M)\t分辨率\t文件名\t目录" > "$info_file"
-                    
-                    # 遍历选中的文件，输出信息
-                    for file in "${selected_files[@]}"; do
-                        local file_dir=$(dirname "$file")
-                        local file_base=$(basename "$file")
-                        local file_size=$(stat -c%s "$file" 2>/dev/null || echo "0")
-                        local file_size_mb=$(awk "BEGIN {printf \"%.2f\", $file_size / 1048576}")
-                        local resolution=$(get_video_resolution "$file")
-                        if [[ -z "$resolution" ]]; then
-                            resolution="未知"
-                        fi
-                        
-                        # 写入信息
-                        echo -e "${file_size_mb}\t${resolution}\t${file_base}\t${file_dir}" >> "$info_file"
-                    done
-                    
-                    echo -e "${GREEN}✓ 已生成待处理视频信息文件: ${CYAN}$info_file${NC}"
-                    echo -e "${YELLOW}  包含 ${#selected_files[@]} 个视频的信息${NC}"
-                    echo
-                    
-                    # 移动源文件到筛选目录
-                    local dir_prefix=$(generate_filter_dir_prefix "$max_size" "LT" "$size_label")
-                    move_files_to_filter_dir "$dir_prefix" "${selected_files[@]}"
-                    ;;
-                *)
-                    echo -e "${RED}✗ 无效选择！${NC}"
-                    return 1
-                    ;;
-            esac
-            ;;
-        2)
-            echo -e "${GREEN}✓ 将处理所有 ${YELLOW}${#small_files[@]}${GREEN} 个小文件${NC}"
-            echo
-            
-            # 添加处理选项
-            echo -e "${BLUE}请选择操作：${NC}"
-            echo -e "  ${CYAN}[1]${NC} 开始处理视频"
-            echo -e "  ${CYAN}[2]${NC} 输出待处理视频信息（xls文件）"
-            echo
-            echo -ne "${BLUE}选择 [1-2]: ${NC}"
-            action_choice=$(read_with_default)
-            
-            echo
-            
-            case "$action_choice" in
-                1)
-                    echo -e "${CYAN}▸ 开始处理视频${NC}"
-                    echo
-                    
-                    select_template
-                    echo
-                    
-                    # 创建CSV日志文件
-                    create_csv_log
-                    echo
-                    
-                    local file_count=1
-                    for file in "${small_files[@]}"; do
-                        process_video "$file" "$file_count" "${#small_files[@]}"
-                        ((file_count++))
-                    done
-                    ;;
-                2)
-                    echo -e "${CYAN}▸ 正在生成待处理视频信息...${NC}"
-                    echo
-                    
-                    local timestamp=$(date +"%Y%m%d_%H-%M")
-                    local info_file="待处理视频_${timestamp}.xls"
-                    
-                    # 创建信息文件并写入表头
-                    echo -e "文件大小(M)\t分辨率\t文件名\t目录" > "$info_file"
-                    
-                    # 遍历所有文件，输出信息
-                    for file in "${small_files[@]}"; do
-                        local file_dir=$(dirname "$file")
-                        local file_base=$(basename "$file")
-                        local file_size=$(stat -c%s "$file" 2>/dev/null || echo "0")
-                        local file_size_mb=$(awk "BEGIN {printf \"%.2f\", $file_size / 1048576}")
-                        local resolution=$(get_video_resolution "$file")
-                        if [[ -z "$resolution" ]]; then
-                            resolution="未知"
-                        fi
-                        
-                        # 写入信息
-                        echo -e "${file_size_mb}\t${resolution}\t${file_base}\t${file_dir}" >> "$info_file"
-                    done
-                    
-                    echo -e "${GREEN}✓ 已生成待处理视频信息文件: ${CYAN}$info_file${NC}"
-                    echo -e "${YELLOW}  包含 ${#small_files[@]} 个视频的信息${NC}"
-                    echo
-                    
-                    # 移动源文件到筛选目录
-                    local dir_prefix=$(generate_filter_dir_prefix "$max_size" "LT" "$size_label")
-                    move_files_to_filter_dir "$dir_prefix" "${small_files[@]}"
-                    ;;
-                *)
-                    echo -e "${RED}✗ 无效选择！${NC}"
-                    return 1
-                    ;;
-            esac
-            ;;
-        *)
-            echo -e "${RED}✗ 无效选择！${NC}"
-            return 1
-            ;;
-    esac
+    process_all_files
 }
 
 # 处理所有视频文件
@@ -1275,13 +1275,41 @@ process_all_files() {
         fi
     done
     files=("${valid_files[@]}")
-    
-    if [[ ${#files[@]} -eq 0 ]]; then
-        echo -e "${RED}✗ 未找到任何视频文件！${NC}"
-        return 1
+
+    # 如果存在“延迟移动”的跳过列表，先从待处理列表剔除
+    local skipped_count=0
+    if [[ ${#pending_skip_files[@]} -gt 0 ]]; then
+        local -A skip_map=()
+        for f in "${pending_skip_files[@]}"; do
+            skip_map["$(normalize_path_key "$f")"]=1
+        done
+
+        local filtered_files=()
+        for file in "${files[@]}"; do
+            if [[ -n "${skip_map[$(normalize_path_key "$file")]+x}" ]]; then
+                ((skipped_count++))
+                continue
+            fi
+            filtered_files+=("$file")
+        done
+        files=("${filtered_files[@]}")
     fi
     
-    echo -e "${GREEN}✓ 找到 ${YELLOW}${#files[@]}${GREEN} 个视频文件${NC}"
+    if [[ ${#files[@]} -eq 0 ]]; then
+        if (( skipped_count > 0 )); then
+            echo -e "${YELLOW}⚠ 所有视频文件均被筛选为跳过（本次不处理）${NC}"
+            clear_pending_skips
+            return 1
+        fi
+        echo -e "${RED}✗ 未找到任何视频文件！${NC}"
+        clear_pending_skips
+        return 1
+    fi
+
+    echo -e "${GREEN}✓ 找到 ${YELLOW}${#files[@]}${GREEN} 个待处理视频文件${NC}"
+    if (( skipped_count > 0 )); then
+        echo -e "${CYAN}  已跳过 ${YELLOW}${skipped_count}${CYAN} 个文件（确认开始处理后将移动到 ${YELLOW}${pending_skip_dir_prefix}${CYAN}）${NC}"
+    fi
     echo
     
     # 添加处理选项
@@ -1298,6 +1326,10 @@ process_all_files() {
         1)
             # 开始处理视频
             echo -e "${CYAN}▸ 开始处理视频${NC}"
+            echo
+
+            # 确认开始处理后，才移动被跳过的源文件
+            commit_pending_skips
             echo
             
             select_template
@@ -1341,12 +1373,20 @@ process_all_files() {
             
             echo -e "${GREEN}✓ 已生成待处理视频信息文件: ${CYAN}$info_file${NC}"
             echo -e "${YELLOW}  包含 ${#files[@]} 个视频的信息${NC}"
+
+            if (( skipped_count > 0 )); then
+                echo -e "${YELLOW}⚠ 未开始处理，本次不会移动被跳过文件${NC}"
+            fi
             ;;
         *)
             echo -e "${RED}✗ 无效选择！${NC}"
+            clear_pending_skips
             return 1
             ;;
     esac
+
+    # 避免筛选状态泄漏到下一次任务
+    clear_pending_skips
 }
 
 # 主菜单
