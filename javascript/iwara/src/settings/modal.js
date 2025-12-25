@@ -467,7 +467,7 @@ export function createSettingsModal(deps) {
 
           <div id="single-add-mode" style="display: block;">
             <div style="display: flex; gap: 8px; margin-bottom: 12px;">
-              <input type="text" id="new-proxy-input" placeholder="多个将会随机选取, 代理地址 例: https://proxy.example.com/" class="iwara-form-input" style="flex: 1;">
+              <input type="text" id="new-proxy-input" placeholder="多个将会随机选取, 代理地址 例: proxy.example.com 或 https://proxy.example.com/" class="iwara-form-input" style="flex: 1;">
               <button class="iwara-btn-small" id="add-proxy">➕ 添加</button>
             </div>
             <div style="display: flex; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; align-items: center;">
@@ -488,8 +488,8 @@ export function createSettingsModal(deps) {
           </div>
 
           <div id="multi-edit-mode" style="display: none;">
-            <textarea id="proxy-input" class="iwara-form-textarea" style="min-height: 160px;" placeholder="每行一个代理，以#开头表示禁用:\nproxy1.example.com\n#proxy2.example.com (禁用)\nhttps://proxy3.example.com/">${currentProxy}</textarea>
-            <p style="color: #64748b; font-size: 12px; margin: 8px 0 0 0;">💡 每行一个代理地址，以 # 开头的代理将被禁用</p>
+            <textarea id="proxy-input" class="iwara-form-textarea" style="min-height: 160px;" placeholder="每行一个代理，以#开头表示禁用:\nproxy1.example.com\n#proxy2.example.com (禁用)\nhttps://proxy3.example.com/\n&#10;💡 不指定协议会自动添加 https://">${currentProxy}</textarea>
+            <p style="color: #64748b; font-size: 12px; margin: 8px 0 0 0;">💡 每行一个代理地址，以 # 开头的代理将被禁用。未指定协议的地址将自动补全为 https://</p>
           </div>
 
           <p style="color: var(--iwara-subtle); font-size: 12px; margin: 8px 0 0 0;">

@@ -3,6 +3,7 @@ export function normalizeProxyUrl(url) {
 
   url = url.trim();
 
+  // 如果没有指定协议，默认添加 https://
   if (!/^https?:\/\//i.test(url)) {
     url = 'https://' + url;
   }
